@@ -33,6 +33,7 @@ class CifFile:
                 in_loop = True
                 loop = []
                 loop_tags = []
+                loop_contents = []
                 continue
             if s == "" and in_loop:
                 in_loop = False
@@ -48,13 +49,39 @@ class CifFile:
                         reading_tags = False
                         start_index = i
                 if not reading_tags:
-                    
+                    for i in range(start_index, len(file_contents)):
+                        if file_contents[i] == "":
+                            if len(loop_contents) % len(loop_tags) != 0:
+                                print(f'Faulty loop block around "{s}"! Please verify "{file_path}" integrity.')
+                                exit(-1)
+                            else:
+                                for i1 in range(len(loop_contents) // len(loop_tags)):
+                                    d = {}
+                                    for i2 in range(len(loop_tags)):
+                                        d[loop_tags[i2]] = loop_contents[i1 + i2]
+                                    loop.append(d)
+                                break
+                        else:
+                            loop_pre_contents = file_contents[i].split()
+                            for l in loop_pre_contents:
+                                loop_contents.append(l.strip())
             if s[0] == "_" and not in_loop:
                 split = s.split()
                 tag_content = ""
                 if len(split) > 1:
                     for i in range(1, len(split)):
                         tag_content += split[i]
+                elif file_contents[file_contents.index(s) + 1] == ";":
+                    ind = file_contents.index(s) + 2
+                    if file_contents[ind] == ";":
+                        print(f'Faulty tag ;-; block encountered around "{s}"! Please verify "{file_path}" integrity.')
+                        exit(-1)
+                    else:
+                        for i in range(ind, len(file_contents)):
+                            if file_contents[i] == ";":
+                                break
+                            else:
+                                tag_content += file_contents[i]
                 else:
                     tag_content = file_contents[file_contents.index(s) + 1].strip()
                 if tag_content == "" or split[0] == "_":
@@ -62,4 +89,3 @@ class CifFile:
                     exit(-1)
                 else:
                     self.tags[split[0][1:]] = tag_content
-                    
