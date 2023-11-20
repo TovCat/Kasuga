@@ -1,4 +1,20 @@
 import os
+import kasuga_io
+
+
+def periodic_to_float(number, count=1):
+    """
+    Round periodic number to regular float with accuracy count (1 by default).
+    """
+    if "(" not in number and ")" not in number:
+        return float(number)
+    else:
+        temp = float(number[0:number.find("(")])
+        for i in range(count):
+            l1 = len(number[number.find(".") + 1: number.find("(")])
+            l2 = len(number[number.find("(") + 1: number.find(")")])
+            temp += float(number[number.find("(") + 1:number.find(")")]) * 10 ** (-1 * (l1 + (i + 1) * l2))
+        return temp
 
 
 class CifFile:
@@ -10,7 +26,10 @@ class CifFile:
         self.loops = {}
 
     def read_raw(self, file_path=""):
-        global loop_tags
+        file_contents = []
+        loop = []
+        loop_tags = []
+        loop_contents = []
         try:
             if "/" not in file_path:  # Try to open file in the same directory
                 file = open(os.path.join(os.getcwd(), file_path), "r")
@@ -18,9 +37,8 @@ class CifFile:
                 file = open(file_path, "r")
             file_contents = file.readlines()
             file.close()
-        except OSError:  # TODO: Native IO Error handling
-            print("Error! Can't open: ", file_path)
-            exit(-1)
+        except OSError:
+            kasuga_io.quit_with_error(f'Error! Can`t open: {file_path}')
 
         for i in range(len(file_contents)):  # Initial survey for any Shelxl data to be expunged
             if "_shelx_res_file" in file_contents[i]:
@@ -28,6 +46,7 @@ class CifFile:
                 break
 
         in_loop = False
+
         for s in file_contents:
             if s == "loop_":
                 in_loop = True
@@ -52,8 +71,7 @@ class CifFile:
                     for i in range(start_index, len(file_contents)):
                         if file_contents[i] == "":
                             if len(loop_contents) % len(loop_tags) != 0:
-                                print(f'Faulty loop block around "{s}"! Please verify "{file_path}" integrity.')
-                                exit(-1)
+                                kasuga_io.quit_with_error(f'Faulty loop block around "{s}"! Please verify "{file_path}" integrity.')
                             else:
                                 for i1 in range(len(loop_contents) // len(loop_tags)):
                                     d = {}
@@ -74,8 +92,7 @@ class CifFile:
                 elif file_contents[file_contents.index(s) + 1] == ";":
                     ind = file_contents.index(s) + 2
                     if file_contents[ind] == ";":
-                        print(f'Faulty tag ;-; block encountered around "{s}"! Please verify "{file_path}" integrity.')
-                        exit(-1)
+                        kasuga_io.quit_with_error(f'Faulty tag ;-; block encountered around "{s}"! Please verify "{file_path}" integrity.')
                     else:
                         for i in range(ind, len(file_contents)):
                             if file_contents[i] == ";":
@@ -85,7 +102,6 @@ class CifFile:
                 else:
                     tag_content = file_contents[file_contents.index(s) + 1].strip()
                 if tag_content == "" or split[0] == "_":
-                    print(f'Faulty CIF tag encountered around "{s}"! Please verify "{file_path}" integrity.')
-                    exit(-1)
+                    kasuga_io.quit_with_error(f'Faulty CIF tag encountered around "{s}"! Please verify "{file_path}" integrity.')
                 else:
                     self.tags[split[0][1:]] = tag_content
