@@ -47,19 +47,22 @@ class CifFile:
 
         in_loop = False
 
-        for s in file_contents:
-            if s == "loop_":
+        for index in range(len(file_contents)):
+            if file_contents[index] == "loop_":
                 in_loop = True
                 loop = []
                 loop_tags = []
                 loop_contents = []
                 continue
-            if s == "" and in_loop:
+
+            if file_contents[index] == "" and in_loop:
                 in_loop = False
                 continue
+
             if in_loop:
-                start_index = file_contents.index(s)
+                start_index = index
                 reading_tags = True
+
                 for i in range(start_index, len(file_contents)):
                     if file_contents[i].strip()[0] == "_":
                         split = file_contents[i].split()
@@ -67,11 +70,14 @@ class CifFile:
                     else:
                         reading_tags = False
                         start_index = i
+
                 if not reading_tags:
                     for i in range(start_index, len(file_contents)):
                         if file_contents[i] == "":
                             if len(loop_contents) % len(loop_tags) != 0:
-                                kasuga_io.quit_with_error(f'Faulty loop block around "{s}"! Please verify "{file_path}" integrity.')
+                                kasuga_io.quit_with_error(f'Faulty loop block around "{file_contents[index]}" '
+                                                          f'and "{file_contents[i]}"! '
+                                                          f'Please verify "{file_path}" integrity.')
                             else:
                                 for i1 in range(len(loop_contents) // len(loop_tags)):
                                     d = {}
@@ -81,18 +87,21 @@ class CifFile:
                                 break
                         else:
                             loop_pre_contents = file_contents[i].split()
-                            for l in loop_pre_contents:
-                                loop_contents.append(l.strip())
-            if s[0] == "_" and not in_loop:
-                split = s.split()
+                            for i2 in loop_pre_contents:
+                                loop_contents.append(i2.strip())
+
+            if file_contents[index][0] == "_" and not in_loop:
+                split = file_contents[index].split()
                 tag_content = ""
+
                 if len(split) > 1:
                     for i in range(1, len(split)):
                         tag_content += split[i]
-                elif file_contents[file_contents.index(s) + 1] == ";":
-                    ind = file_contents.index(s) + 2
+                elif file_contents[index + 1] == ";":
+                    ind = index + 2
                     if file_contents[ind] == ";":
-                        kasuga_io.quit_with_error(f'Faulty tag ;-; block encountered around "{s}"! Please verify "{file_path}" integrity.')
+                        kasuga_io.quit_with_error(f'Faulty tag ;-; block encountered around "{file_contents[index]}"! '
+                                                  f'Please verify "{file_path}" integrity.')
                     else:
                         for i in range(ind, len(file_contents)):
                             if file_contents[i] == ";":
@@ -100,8 +109,10 @@ class CifFile:
                             else:
                                 tag_content += file_contents[i]
                 else:
-                    tag_content = file_contents[file_contents.index(s) + 1].strip()
+                    tag_content = file_contents[index + 1].strip()
+
                 if tag_content == "" or split[0] == "_":
-                    kasuga_io.quit_with_error(f'Faulty CIF tag encountered around "{s}"! Please verify "{file_path}" integrity.')
+                    kasuga_io.quit_with_error(f'Faulty CIF tag encountered around "{file_contents[index]}"!'
+                                              f' Please verify "{file_path}" integrity.')
                 else:
                     self.tags[split[0][1:]] = tag_content
