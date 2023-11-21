@@ -10,6 +10,8 @@ class CifFile:
     @staticmethod
     def parse_line(line):
         line = line.strip()
+        if line == "?":
+            return ""
         if line[0] == "'" and line[len(line) - 1] == "'":
             return line[1:len(line) - 1]
         split = line.split()
@@ -35,7 +37,7 @@ class CifFile:
                                 temp += float(s[s.find("(") + 1:s.find(")")]) * 10 ** (-1 * (l1 + (i + 1) * l2))
                             out.append(temp)
                         else:
-                            kasuga_io.quit_with_error(f'Unrecognized variable in {line}!')
+                            kasuga_io.quit_with_error(f'Unrecognized variable in "{line}"!')
 
     @classmethod
     def read_raw(cls, file_path):
@@ -100,18 +102,23 @@ class CifFile:
                                     loop.append(d)
                                 break
                         else:
-                            loop_pre_contents = file_contents[i].split()
-                            for i2 in loop_pre_contents:
-                                loop_contents.append(i2.strip())
+                            loop_pre_contents = cls.parse_line(file_contents[i])
+                            if isinstance(loop_pre_contents, list):
+                                for i2 in loop_pre_contents:
+                                    loop_contents.append(i2)
+                            else:
+                                loop_contents.append(loop_pre_contents)
 
             if file_contents[index][0] == "_" and not in_loop:
                 split = file_contents[index].split()
                 tag_content = ""
 
+                cd_block_encountered = False
                 if len(split) > 1:
                     for i in range(1, len(split)):
                         tag_content += split[i]
                 elif ";" in file_contents[index + 1]:
+                    cd_block_encountered = True
                     ind = index + 2
                     if file_contents[ind] == ";":
                         kasuga_io.quit_with_error(f'Faulty tag ;-; block encountered around "{file_contents[index]}"! '
@@ -123,10 +130,13 @@ class CifFile:
                             else:
                                 tag_content += file_contents[i]
                 else:
-                    tag_content = file_contents[index + 1].strip()
+                    tag_content = file_contents[index + 1]
 
                 if tag_content == "" or split[0] == "_":
                     kasuga_io.quit_with_error(f'Faulty CIF tag encountered around "{file_contents[index]}"!'
                                               f' Please verify "{file_path}" integrity.')
                 else:
-                    cls.tags[split[0][1:]] = tag_content
+                    if cd_block_encountered:
+                        cls.tags[split[0][1:]] = tag_content
+                    else:
+                        cls.tags[split[0][1:]] = cls.parse_line(tag_content)
