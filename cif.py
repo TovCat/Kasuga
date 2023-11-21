@@ -5,12 +5,12 @@ import kasuga_io
 class CifFile:
     # Parser and processor for .cif files according to CIF v1.1 standard
     tags = {}
-    loops = {}
+    loops = []
 
     @staticmethod
     def parse_line(line):
         line = line.strip()
-        if line == "?":
+        if line == "?" or line == ".":
             return ""
         if line[0] == "'" and line[len(line) - 1] == "'":
             return line[1:len(line) - 1]
@@ -29,7 +29,9 @@ class CifFile:
                         pre = float(s)
                         out.append(pre)
                     except ValueError:
-                        if "(" in s and ")" in s:
+                        if isinstance(s, str):
+                            out.append(s)
+                        elif "(" in s and ")" in s:
                             temp = float(s[0:s.find("(")])
                             for i in range(3):
                                 l1 = len(s[s.find(".") + 1: s.find("(")])
@@ -38,11 +40,15 @@ class CifFile:
                             out.append(temp)
                         else:
                             kasuga_io.quit_with_error(f'Unrecognized variable in "{line}"!')
+        if len(out) == 1:
+            return out[0]
+        else:
+            return out
 
     @classmethod
     def read_raw(cls, file_path):
         file_contents = []
-        loop = []
+        parsed_loop = []
         loop_tags = []
         loop_contents = []
         try:
@@ -61,18 +67,23 @@ class CifFile:
                 break
 
         in_loop = False
+        loop_parsed = False
 
         for index in range(len(file_contents)):
             if "loop_" in file_contents[index]:
                 in_loop = True
-                loop = []
+                parsed_loop = []
                 loop_tags = []
                 loop_contents = []
                 continue
 
-            if file_contents[index] == "" and in_loop:
-                in_loop = False
-                continue
+            if in_loop and loop_parsed:
+                if file_contents[index].strip() == "":
+                    in_loop = False
+                    loop_parsed = False
+                    continue
+                else:
+                    continue
 
             if in_loop:
                 start_index = index
@@ -89,7 +100,7 @@ class CifFile:
 
                 if not reading_tags:
                     for i in range(start_index, len(file_contents)):
-                        if file_contents[i] == "":
+                        if file_contents[i].strip() == "":
                             if len(loop_contents) % len(loop_tags) != 0:
                                 kasuga_io.quit_with_error(f'Faulty loop block around "{file_contents[index]}" '
                                                           f'and "{file_contents[i]}"! '
@@ -99,7 +110,9 @@ class CifFile:
                                     d = {}
                                     for i2 in range(len(loop_tags)):
                                         d[loop_tags[i2]] = loop_contents[i1 + i2]
-                                    loop.append(d)
+                                    parsed_loop.append(d)
+                                cls.loops.append(parsed_loop)
+                                loop_parsed = True
                                 break
                         else:
                             loop_pre_contents = cls.parse_line(file_contents[i])
