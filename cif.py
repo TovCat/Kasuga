@@ -123,8 +123,8 @@ element_weight = {
 class Atom:
     weight = 0.0  # Atomic weight
     symbol = ""  # Chemical symbol of an atom
-    coord = np.zeros((1, 3))  # Cartesian coordinates
-    coord_abc = np.zeros((1, 3))  # Coordinates in the abc-system
+    coord = np.zeros((3, 1))  # Cartesian coordinates
+    coord_abc = np.zeros((3, 1))  # Coordinates in the abc-system
 
     @classmethod
     def assign_weights(cls):
@@ -136,17 +136,21 @@ class Atom:
 
 class CifFile:
     # Parser and processor for .cif files according to CIF v1.1 standard
-    tags = {}
-    loops = []
+    tags = {}  # Single fields from CIF
+    loops = []  # Looped fields from CIF
+    # Cell parameters
     cell_length_a = 0.0
     cell_length_b = 0.0
     cell_length_c = 0.0
     cell_angle_alpha = 0.0
     cell_angle_beta = 0.0
     cell_angle_gamma = 0.0
-    translation_a = np.zeros((1, 3))
-    translation_b = np.zeros((1, 3))
-    translation_c = np.zeros((1, 3))
+    # Cartesian translation vectors
+    translation_a = np.zeros((3, 1))
+    translation_b = np.zeros((3, 1))
+    translation_c = np.zeros((3, 1))
+    # Transformation matrix from abc-system to Cartesian
+    transform_matrix = np.zeros((3, 3))
 
     @staticmethod
     def parse_line(line):
@@ -185,6 +189,29 @@ class CifFile:
             return out[0]
         else:
             return out
+
+    @staticmethod
+    def transform_abc_to_cartesian(vector: np.array, transform: np.array):
+        if transform.shape != (3, 3):
+            kasuga_io.quit_with_error(f'Wrong dimensions of a transformation matrix!')
+        if vector.shape == (3, 1):
+            return np.matmul(transform, vector)
+        elif vector.shape == (1, 3):
+            return np.transpose(transform, np.transpose(vector))
+        else:
+            kasuga_io.quit_with_error(f'Wrong dimensions of a transformed vector!')
+
+    @staticmethod
+    def transform_cartesian_to_abc(vector: np.array, transform: np.array):
+        if transform.shape != (3, 3):
+            kasuga_io.quit_with_error(f'Wrong dimensions of a transformation matrix!')
+        transform_revert = np.linalg.inv(transform)
+        if vector.shape == (3, 1):
+            return np.matmul(transform_revert, vector)
+        elif vector.shape == (1, 3):
+            return np.transpose(transform_revert, np.transpose(vector))
+        else:
+            kasuga_io.quit_with_error(f'Wrong dimensions of a transformed vector!')
 
     @classmethod
     def read_raw(cls, file_path):
@@ -301,11 +328,25 @@ class CifFile:
         cls.cell_length_a = cls.tags['cell_length_a']
         cls.cell_length_b = cls.tags['cell_length_b']
         cls.cell_length_c = cls.tags['cell_length_c']
+
         # Primitive cell angles
         cls.cell_angle_alpha = cls.tags['cell_angle_alpha']  # Between c and b
         cls.cell_angle_beta = cls.tags['cell_angle_beta']  # Between c and a
         cls.cell_angle_gamma = cls.tags['cell_angle_gamma']  # Between a and b
+
+        # Generate transformation matrix from abc to Cartesian
+        cosa = np.cos(np.deg2rad(cls.cell_angle_alpha))
+        cosb = np.cos(np.deg2rad(cls.cell_angle_beta))
+        cosg = np.cos(np.deg2rad(cls.cell_angle_gamma))
+        sing = np.sin(np.deg2rad(cls.cell_angle_gamma))
+        volume = np.sqrt(1.0 - cosa ** 2.0 - cosb ** 2.0 - cosg ** 2.0 + 2.0 * cosa * cosb * cosg)
+        cls.transform_matrix = np.array([[cls.cell_length_a, cls.cell_length_b * cosg, cls.cell_length_c * cosb],
+                                         [0, cls.cell_length_b * sing, cls.cell_length_c * (cosa - cosb * cosg) / sing],
+                                         [0, 0, cls.cell_length_c * volume / sing]])
+
         # Translation vectors in cartesian coordinates
         # Most of the symmetry operations are performed in the abc-system for the sake of simplicity
         # Yet, for some processing down the line we might need cartesian vectors as well
         cls.translation_a[1, 1] = cls.cell_length_a  # We assume that X-axis is aligned with a-axis
+        cls.translation_b = CifFile.transform_abc_to_cartesian(np.array([0, 1, 0]), cls.transform_matrix)
+        cls.translation_c = CifFile.transform_abc_to_cartesian(np.array([0, 0, 1]), cls.transform_matrix)
