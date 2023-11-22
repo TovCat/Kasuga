@@ -1,11 +1,152 @@
 import os
 import kasuga_io
+import numpy as np
+
+# Atomic weights for each respected atom
+element_weight = {
+    'H': 1.0075,
+    'D': 2.01410178,
+    'He': 4.002,
+    'Li': 6.9675,
+    'Be': 9.012,
+    'B': 10.8135,
+    'C': 12.0106,
+    'N': 14.0065,
+    'O': 15.999,
+    'F': 18.998,
+    'Ne': 20.1797,
+    'Na': 22.989,
+    'Mg': 24.3050,
+    'Al': 26.981,
+    'Si': 28.085,
+    'P': 30.973,
+    'S': 32.0675,
+    'Cl': 35.4515,
+    'Ar': 39.948,
+    'K': 39.0983,
+    'Ca': 40.078,
+    'Sc': 44.955,
+    'Ti': 47.867,
+    'V': 50.9415,
+    'Cr': 51.9961,
+    'Mn': 54.938,
+    'Fe': 55.845,
+    'Co': 58.933,
+    'Ni': 58.6934,
+    'Cu': 63.546,
+    'Zn': 65.38,
+    'Ga': 69.723,
+    'Ge': 72.63,
+    'As': 74.921,
+    'Se': 78.96,
+    'Br': 79.904,
+    'Kr': 83.798,
+    'Rb': 85.4678,
+    'Sr': 87.62,
+    'Y': 88.905,
+    'Zr': 91.224,
+    'Nb': 92.906,
+    'Mo': 95.96,
+    'Tc': 98,
+    'Ru': 101.07,
+    'Rh': 102.905,
+    'Pd': 106.42,
+    'Ag': 107.8682,
+    'Cd': 112.411,
+    'In': 114.818,
+    'Sn': 118.710,
+    'Sb': 121.760,
+    'Te': 127.60,
+    'I': 126.904,
+    'Xe': 131.293,
+    'Cs': 132.905,
+    'Ba': 137.327,
+    'La': 138.905,
+    'Ce': 140.116,
+    'Pr': 140.907,
+    'Nd': 144.242,
+    'Pm': 145,
+    'Sm': 150.36,
+    'Eu': 151.964,
+    'Gd': 157.25,
+    'Tb': 158.925,
+    'Dy': 162.500,
+    'Ho': 164.930,
+    'Er': 167.259,
+    'Tm': 168.934,
+    'Yb': 173.054,
+    'Lu': 174.9668,
+    'Hf': 178.49,
+    'Ta': 180.947,
+    'W': 183.84,
+    'Re': 186.207,
+    'Os': 190.23,
+    'Ir': 192.217,
+    'Pt': 195.084,
+    'Au': 196.966,
+    'Hg': 200.59,
+    'Tl': 204.3835,
+    'Pb': 207.2,
+    'Bi': 208.980,
+    'Po': 209,
+    'At': 210,
+    'Rn': 222,
+    'Fr': 223,
+    'Ra': 226,
+    'Ac': 227,
+    'Th': 232.038,
+    'Pa': 231.035,
+    'U': 238.028,
+    'Np': 237,
+    'Pu': 244,
+    'Am': 243,
+    'Cm': 247,
+    'Bk': 247,
+    'Cf': 251,
+    'Es': 252,
+    'Fm': 257,
+    'Md': 258,
+    'No': 259,
+    'Lr': 262,
+    'Rf': 267,
+    'Db': 268,
+    'Sg': 271,
+    'Bh': 272,
+    'Hs': 270,
+    'Mt': 276,
+    'Ds': 281,
+    'Rg': 280,
+    'Cn': 285
+}
+
+
+class Atom:
+    weight = 0.0  # Atomic weight
+    symbol = ""  # Chemical symbol of an atom
+    coord = np.zeros((1, 3))  # Cartesian coordinates
+    coord_abc = np.zeros((1, 3))  # Coordinates in the abc-system
+
+    @classmethod
+    def assign_weights(cls):
+        if cls.symbol in element_weight:
+            cls.weight = element_weight[cls.symbol]
+        else:
+            kasuga_io.quit_with_error(f'Unrecognized {cls.symbol} atom encountered!')
 
 
 class CifFile:
     # Parser and processor for .cif files according to CIF v1.1 standard
     tags = {}
     loops = []
+    cell_length_a = 0.0
+    cell_length_b = 0.0
+    cell_length_c = 0.0
+    cell_angle_alpha = 0.0
+    cell_angle_beta = 0.0
+    cell_angle_gamma = 0.0
+    translation_a = np.zeros((1, 3))
+    translation_b = np.zeros((1, 3))
+    translation_c = np.zeros((1, 3))
 
     @staticmethod
     def parse_line(line):
@@ -153,3 +294,18 @@ class CifFile:
                         cls.tags[split[0][1:]] = tag_content
                     else:
                         cls.tags[split[0][1:]] = cls.parse_line(tag_content)
+
+    @classmethod
+    def parse_raw(cls):
+        # Primitive cell dimensions
+        cls.cell_length_a = cls.tags['cell_length_a']
+        cls.cell_length_b = cls.tags['cell_length_b']
+        cls.cell_length_c = cls.tags['cell_length_c']
+        # Primitive cell angles
+        cls.cell_angle_alpha = cls.tags['cell_angle_alpha']  # Between c and b
+        cls.cell_angle_beta = cls.tags['cell_angle_beta']  # Between c and a
+        cls.cell_angle_gamma = cls.tags['cell_angle_gamma']  # Between a and b
+        # Translation vectors in cartesian coordinates
+        # Most of the symmetry operations are performed in the abc-system for the sake of simplicity
+        # Yet, for some processing down the line we might need cartesian vectors as well
+        cls.translation_a[1, 1] = cls.cell_length_a  # We assume that X-axis is aligned with a-axis
