@@ -121,17 +121,78 @@ element_weight = {
 
 
 class Atom:
-    weight = 0.0  # Atomic weight
-    symbol = ""  # Chemical symbol of an atom
+    weight = float  # Atomic weight
+    symbol = str  # Chemical symbol of an atom
     coord = np.zeros((3, 1))  # Cartesian coordinates
     coord_abc = np.zeros((3, 1))  # Coordinates in the abc-system
 
     @classmethod
-    def assign_weights(cls):
+    def assign_weight(cls):
         if cls.symbol in element_weight:
             cls.weight = element_weight[cls.symbol]
         else:
             kasuga_io.quit_with_error(f'Unrecognized {cls.symbol} atom encountered!')
+
+
+class Molecule:
+    atoms = [Atom]
+    molecular_formula = ""
+
+    @classmethod
+    def generate_molecular_formula(cls):
+        atom_list = [str]
+        count_list = [int]
+        for i in range(len(cls.atoms)):
+            if cls.atoms[i].symbol not in atom_list:
+                atom_list.append(cls.atoms[i].symbol)
+                count_list.append(0)
+        atom_list.sort()
+        for i1 in range(len(cls.atoms)):
+            for i2 in range(len(atom_list)):
+                if cls.atoms[i1].symbol == atom_list[i2]:
+                    count_list += 1
+        result = ""
+        for i in range(len(atom_list)):
+            result += (atom_list[i] + str(count_list[i]))
+        cls.molecular_formula = result
+        return result
+
+
+def molecules_equal(a: Molecule, b: Molecule, same_order=True, simplified=True):
+    diff = 0.0
+    # Simple tests first to potentially save the hassle
+    if len(a.atoms) != len(b.atoms):
+        return False
+    if a.generate_molecular_formula() != b.generate_molecular_formula():
+        return False
+    if not same_order:
+        # For symmetry cloned molecules it's safe to assume that the order of atoms is still the same
+        # But generally it's not always the case, especially if molecules originate from different sources
+        for i1 in range(len(a.atoms)):
+            current_min = 1000
+            current_diff = 0.0
+            for i2 in range(len(b.atoms)):
+                # We look for the closest atom with the same symbol
+                diff_vector = a.atoms[i1].coord - b.atoms[i2].coord
+                if simplified and (a.atoms[i1].symbol == b.atoms[i2].symbol):
+                    # We have to calculate A LOT OF squares and roots, so it's generally fine to use approximation
+                    current_diff = abs(diff_vector[1, 1]) + abs(diff_vector[2, 1]) + abs(diff_vector[3, 1])
+                elif not simplified and (a.atoms[i1].symbol == b.atoms[i2].symbol):
+                    current_diff = np.sqrt(diff_vector[1, 1] ** 2 + diff_vector[2, 1] ** 2 + diff_vector[3, 1] ** 2)
+                if current_diff < current_min:
+                    current_min = current_diff
+            diff += current_min
+    else:
+        for i1 in range(len(a.atoms)):
+            diff_vector = a.atoms[i1].coord - b.atoms[i1].coord
+            if simplified:
+                diff += abs(diff_vector[1, 1]) + abs(diff_vector[2, 1]) + abs(diff_vector[3, 1])
+            else:
+                diff += np.sqrt(diff_vector[1, 1] ** 2 + diff_vector[2, 1] ** 2 + diff_vector[3, 1] ** 2)
+    if diff < 0.05:
+        return True
+    else:
+        return False
 
 
 class CifFile:
@@ -139,18 +200,20 @@ class CifFile:
     tags = {}  # Single fields from CIF
     loops = []  # Looped fields from CIF
     # Cell parameters
-    cell_length_a = 0.0
-    cell_length_b = 0.0
-    cell_length_c = 0.0
-    cell_angle_alpha = 0.0
-    cell_angle_beta = 0.0
-    cell_angle_gamma = 0.0
+    cell_length_a = float
+    cell_length_b = float
+    cell_length_c = float
+    cell_angle_alpha = float
+    cell_angle_beta = float
+    cell_angle_gamma = float
     # Cartesian translation vectors
     translation_a = np.zeros((3, 1))
     translation_b = np.zeros((3, 1))
     translation_c = np.zeros((3, 1))
     # Transformation matrix from abc-system to Cartesian
     transform_matrix = np.zeros((3, 3))
+    # Asymmetric unit of a primitive cell
+    as_unit = Molecule
 
     @staticmethod
     def parse_line(line):
@@ -350,3 +413,20 @@ class CifFile:
         cls.translation_a[1, 1] = cls.cell_length_a  # We assume that X-axis is aligned with a-axis
         cls.translation_b = CifFile.transform_abc_to_cartesian(np.array([0, 1, 0]), cls.transform_matrix)
         cls.translation_c = CifFile.transform_abc_to_cartesian(np.array([0, 0, 1]), cls.transform_matrix)
+
+        # Extract fractional coordinates from CIF loops
+        found_as = False
+        for i1 in range(len(cls.loops)):
+            if "atom_site_label" in cls.loops[i1][0]:
+                if found_as:
+                    kasuga_io.quit_with_error(f'Duplicated asymmetric units in CIF file!')
+                else:
+                    found_as = True
+                for i2 in range(len(cls.loops[i1])):
+                    a = Atom
+                    a.symbol = cls.loops[i1][i2]['atom_site_type_symbol']
+                    a.assign_weight()
+                    a.coord_abc[1, 1] = cls.loops[i1][i2]['atom_site_fract_x']
+                    a.coord_abc[2, 1] = cls.loops[i1][i2]['atom_site_fract_y']
+                    a.coord_abc[3, 1] = cls.loops[i1][i2]['atom_site_fract_z']
+                    cls.as_unit.atoms.append(a)
