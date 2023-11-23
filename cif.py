@@ -211,6 +211,21 @@ covalent_radius = {
     'Cs': 2.35
 }
 
+
+def rotation_matrix(axis, angle):
+    """
+    Generate rotation matrix for alpha, beta and gamma angles (x, y, z).
+    """
+    matrix = np.zeros((3, 3))
+    if axis == "a":
+        matrix = np.array([[1, 0, 0], [0, np.cos(angle), -1 * np.sin(angle)], [0, np.sin(angle), np.cos(angle)]])
+    elif axis == "b":
+        matrix = np.array([[np.cos(angle), 0, np.sin(angle)], [0, 1, 0], [-1 * np.sin(angle), 0, np.cos(angle)]])
+    elif axis == "c":
+        matrix = np.array([[np.cos(angle), -1 * np.sin(angle), 0], [np.sin(angle), np.cos(angle), 0], [0, 0, 1]])
+    return matrix
+
+
 class Atom:
     weight = float  # Atomic weight
     symbol = str  # Chemical symbol of an atom
@@ -225,10 +240,35 @@ class Atom:
             kasuga_io.quit_with_error(f'Unrecognized {cls.symbol} atom encountered!')
 
 
+
+def atoms_distance(a: Atom, b: Atom, simplified=False):
+    diff_vector = a.coord - b.coord
+    if simplified:
+        # Sometimes, when performing especially heavy calculations, it might be useful to take crude simplified approach
+        return abs(diff_vector[1, 1]) + abs(diff_vector[2, 1]) + abs(diff_vector[3, 1])
+    else:
+        # But usually numpy is fast enough, so it's False by default
+        return np.linalg.norm(diff_vector)
+
+
+def atoms_connected(a: Atom, b: Atom, simplified=False, cutoff=0.025):
+    distance = atoms_distance(a, b, simplified)
+    covalent_sum = covalent_radius[a.symbol] + covalent_radius[b.symbol]
+    if abs(covalent_sum - distance) <= cutoff:
+        return True
+    else:
+        return False
+
+
 class Molecule:
     atoms = [Atom]
     molecular_formula = ""
     mass_center = np.zeros((3, 1))
+    connectivity_matrix = np.zeros((1, 1))
+
+    def __add__(self, other):
+        for i in other.atoms:
+            self.atoms.append(i)
 
     @classmethod
     def get_mass_center(cls):
@@ -261,24 +301,16 @@ class Molecule:
             cls.molecular_formula = result
         return cls.molecular_formula
 
-
-def atoms_distance(a: Atom, b: Atom, simplified=False):
-    diff_vector = a.coord - b.coord
-    if simplified:
-        # Sometimes, when performing especially heavy calculations, it might be useful to take crude simplified approach
-        return abs(diff_vector[1, 1]) + abs(diff_vector[2, 1]) + abs(diff_vector[3, 1])
-    else:
-        # But usually numpy is fast enough, so it's False by default
-        return np.linalg.norm(diff_vector)
-
-
-def atoms_connected(a: Atom, b: Atom, simplified=False, cutoff=0.025):
-    distance = atoms_distance(a, b, simplified)
-    covalent_sum = covalent_radius[a.symbol] + covalent_radius[b.symbol]
-    if abs(covalent_sum - distance) <= cutoff:
-        return True
-    else:
-        return False
+    @classmethod
+    def get_connectivity_matrix(cls):
+        if cls.connectivity_matrix == np.zeros((1, 1)):
+            cls.connectivity_matrix = np.zeros((len(cls.atoms), len(cls.atoms)))
+            for i1 in range(len(cls.atoms)):
+                for i2 in range(i1, len(cls.atoms)):
+                    if atoms_connected(cls.atoms[i1], cls.atoms[i2]):
+                        cls.connectivity_matrix[i1, i2] = 1
+                        cls.connectivity_matrix[i2, i1] = 1
+        return cls.connectivity_matrix
 
 
 def molecules_equal(a: Molecule, b: Molecule, same_order=True, simplified=False):
