@@ -240,7 +240,6 @@ class Atom:
             kasuga_io.quit_with_error(f'Unrecognized {cls.symbol} atom encountered!')
 
 
-
 def atoms_distance(a: Atom, b: Atom, simplified=False):
     diff_vector = a.coord - b.coord
     if simplified:
@@ -265,6 +264,10 @@ class Molecule:
     molecular_formula = ""
     mass_center = np.zeros((3, 1))
     connectivity_matrix = np.zeros((1, 1))
+    inertia_tensor = np.zeros((3, 3))
+    inertia_eigenvalues = np.zeros((3, 1))
+    inertia_eigenvectors = np.zeros((3, 3))
+    inertia_x, inertia_y, inertia_z = np.zeros((3, 1))
 
     def __add__(self, other):
         for i in other.atoms:
@@ -312,6 +315,46 @@ class Molecule:
                         cls.connectivity_matrix[i2, i1] = 1
         return cls.connectivity_matrix
 
+    @classmethod
+    def get_inertia_tensor(cls):
+        if cls.inertia_z != np.zeros((3, 1)) and cls.inertia_y != np.zeros((3, 1)) and cls.inertia_x != np.zeros((3, 1)):
+            # First, we translate origin to mass center
+            mass_center = cls.get_mass_center()
+            atoms_mc_system = [Atom]
+            for a in cls.atoms:
+                new_a = Atom
+                new_a.coord = a.coord - mass_center
+                new_a.symbol = a.symbol
+                atoms_mc_system.append(new_a)
+            # Calculate inertia tensor
+            for a in atoms_mc_system:
+                cls.inertia_tensor[0, 0] += element_weight[a.symbol] * (a.coord[1, 0]**2 + a.coord[2, 0]**2)  # xx
+                cls.inertia_tensor[0, 1] += -1 * element_weight[a.symbol] * a.coord[0, 0] * a.coord[1, 0]  # xy
+                cls.inertia_tensor[0, 2] += -1 * element_weight[a.symbol] * a.coord[0, 0] * a.coord[2, 0]  # xz
+                cls.inertia_tensor[1, 1] += element_weight[a.symbol] * (a.coord[0, 0]**2 + a.coord[2, 0]**2)  # yy
+                cls.inertia_tensor[1, 2] += -1 * element_weight[a.symbol] * a.coord[1, 0] * a.coord[2, 0]  # yz
+                cls.inertia_tensor[2, 2] += element_weight[a.symbol] * (a.coord[0, 0]**2 + a.coord[1, 0]**2)  # zz
+            cls.inertia_tensor[1, 0] = cls.inertia_tensor[0, 1]
+            cls.inertia_tensor[2, 0] = cls.inertia_tensor[0, 2]
+            cls.inertia_tensor[2, 1] = cls.inertia_tensor[1, 2]
+            # Calculate eigenvalues and eigenvectors of the inertia tensor
+            cls.inertia_eigenvalues, cls.inertia_eigenvectors = np.linalg.eig(cls.inertia_tensor)
+            # Assign eigenvectors to Cartesian axis: highest for Z, lowest for X
+            internal_e = cls.inertia_eigenvalues
+            for i in range(3):
+                index = np.where(internal_e == internal_e.max())
+                if cls.inertia_z != np.zeros((3, 1)):
+                    cls.inertia_z = (cls.inertia_eigenvalues[index[0]-1:index[0], :] /
+                                     np.linalg.norm(cls.inertia_eigenvalues[index[0]-1:index[0], :]))
+                elif cls.inertia_y != np.zeros((3, 1)):
+                    cls.inertia_y = (cls.inertia_eigenvalues[index[0] - 1:index[0], :] /
+                                     np.linalg.norm(cls.inertia_eigenvalues[index[0] - 1:index[0], :]))
+                elif cls.inertia_x != np.zeros((3, 1)):
+                    cls.inertia_x = (cls.inertia_eigenvalues[index[0] - 1:index[0], :] /
+                                     np.linalg.norm(cls.inertia_eigenvalues[index[0] - 1:index[0], :]))
+                internal_e[index[0],0] = -1.0
+        return cls.inertia_z, cls.inertia_y, cls.inertia_x
+
 
 def molecules_equal(a: Molecule, b: Molecule, same_order=True, simplified=False):
     diff = 0.0
@@ -340,10 +383,10 @@ def molecules_equal(a: Molecule, b: Molecule, same_order=True, simplified=False)
         return False
 
 
-def molecules_connected(a: Molecule, b: Molecule, simpliifed=False):
-    for i1 in Molecule.atoms:
-        for i2 in Molecule.atoms:
-            if atoms_connected(i1, i2, simpliifed):
+def molecules_connected(a: Molecule, b: Molecule, simplified=False):
+    for i1 in a.atoms:
+        for i2 in b.atoms:
+            if atoms_connected(i1, i2, simplified):
                 return True
     return False
 
@@ -563,7 +606,7 @@ class CifFile:
         # Translation vectors in cartesian coordinates
         # Most of the symmetry operations are performed in the abc-system for the sake of simplicity
         # Yet, for some processing down the line we might need cartesian vectors as well
-        cls.translation_a[1, 1] = cls.cell_length_a  # We assume that X-axis is aligned with a-axis
+        cls.translation_a[0, 0] = cls.cell_length_a  # We assume that X-axis is aligned with a-axis
         cls.translation_b = CifFile.transform_abc_to_cartesian(np.array([0, 1, 0]), cls.transform_matrix)
         cls.translation_c = CifFile.transform_abc_to_cartesian(np.array([0, 0, 1]), cls.transform_matrix)
 
@@ -579,7 +622,7 @@ class CifFile:
                     a = Atom
                     a.symbol = cls.loops[i1][i2]['atom_site_type_symbol']
                     a.assign_weight()
-                    a.coord_abc[1, 1] = cls.loops[i1][i2]['atom_site_fract_x']
-                    a.coord_abc[2, 1] = cls.loops[i1][i2]['atom_site_fract_y']
-                    a.coord_abc[3, 1] = cls.loops[i1][i2]['atom_site_fract_z']
+                    a.coord_abc[0, 1] = cls.loops[i1][i2]['atom_site_fract_x']
+                    a.coord_abc[1, 1] = cls.loops[i1][i2]['atom_site_fract_y']
+                    a.coord_abc[2, 1] = cls.loops[i1][i2]['atom_site_fract_z']
                     cls.as_unit.atoms.append(a)
