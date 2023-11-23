@@ -119,6 +119,97 @@ element_weight = {
     'Cn': 285
 }
 
+covalent_radius = {
+    'H': 0.32,
+    'D': 0.32,
+    'Ne': 0.71,
+    'F': 0.72,
+    'O': 0.73,
+    'N': 0.75,
+    'C': 0.77,
+    'B': 0.82,
+    'Be': 0.90,
+    'He': 0.93,
+    'Ar': 0.98,
+    'Cl': 0.99,
+    'S': 1.02,
+    'P': 1.06,
+    'Si': 1.11,
+    'Kr': 1.12,
+    'Br': 1.14,
+    'Ni': 1.15,
+    'Se': 1.16,
+    'Co': 1.16,
+    'Cu': 1.17,
+    'Fe': 1.17,
+    'Mn': 1.17,
+    'Al': 1.18,
+    'Cr': 1.18,
+    'As': 1.20,
+    'Ge': 1.22,
+    'V': 1.22,
+    'Li': 1.23,
+    'Rh': 1.25,
+    'Ru': 1.25,
+    'Zn': 1.25,
+    'Ga': 1.26,
+    'Os': 1.26,
+    'Ir': 1.27,
+    'Tc': 1.27,
+    'Re': 1.28,
+    'Pd': 1.28,
+    'W': 1.30,
+    'Pt': 1.30,
+    'Mo': 1.30,
+    'Xe': 1.31,
+    'Ti': 1.32,
+    'I': 1.33,
+    'Ta': 1.34,
+    'Nb': 1.34,
+    'Ag': 1.34,
+    'Au': 1.34,
+    'Te': 1.36,
+    'Mg': 1.36,
+    'Sn': 1.41,
+    'Sb': 1.41,
+    'U': 1.42,
+    'In': 1.44,
+    'Sc': 1.44,
+    'Hf': 1.44,
+    'Zr': 1.45,
+    'At': 1.45,
+    'Bi': 1.46,
+    'Po': 1.46,
+    'Pb': 1.47,
+    'Cd': 1.48,
+    'Tl': 1.48,
+    'Hg': 1.49,
+    'Na': 1.54,
+    'Tm': 1.56,
+    'Lu': 1.56,
+    'Er': 1.57,
+    'Ho': 1.58,
+    'Dy': 1.59,
+    'Tb': 1.59,
+    'Gd': 1.61,
+    'Y': 1.62,
+    'Sm': 1.62,
+    'Pm': 1.63,
+    'Nd': 1.64,
+    'Th': 1.65,
+    'Ce': 1.65,
+    'Pr': 1.65,
+    'La': 1.69,
+    'Yb': 1.74,
+    'Ca': 1.74,
+    'Eu': 1.85,
+    'Pu': 1.87,
+    'Sr': 1.91,
+    'Ba': 1.98,
+    'K': 2.03,
+    'Rb': 2.16,
+    'Cs': 2.35
+}
 
 class Atom:
     weight = float  # Atomic weight
@@ -137,62 +228,92 @@ class Atom:
 class Molecule:
     atoms = [Atom]
     molecular_formula = ""
+    mass_center = np.zeros((3, 1))
 
     @classmethod
-    def generate_molecular_formula(cls):
-        atom_list = [str]
-        count_list = [int]
-        for i in range(len(cls.atoms)):
-            if cls.atoms[i].symbol not in atom_list:
-                atom_list.append(cls.atoms[i].symbol)
-                count_list.append(0)
-        atom_list.sort()
-        for i1 in range(len(cls.atoms)):
-            for i2 in range(len(atom_list)):
-                if cls.atoms[i1].symbol == atom_list[i2]:
-                    count_list += 1
-        result = ""
-        for i in range(len(atom_list)):
-            result += (atom_list[i] + str(count_list[i]))
-        cls.molecular_formula = result
-        return result
+    def get_mass_center(cls):
+        if cls.mass_center == np.zeros((3, 1)):
+            mass = 0.0
+            mass_vector = np.zeros((3, 1))
+            for atom in cls.atoms:
+                mass += element_weight[atom.symbol]
+                mass_vector += atom.coord * element_weight[atom.symbol]
+            cls.mass_center = mass_vector / mass
+        return cls.mass_center
+
+    @classmethod
+    def get_molecular_formula(cls):
+        if cls.molecular_formula == "":
+            atom_list = [str]
+            count_list = [int]
+            for i in range(len(cls.atoms)):
+                if cls.atoms[i].symbol not in atom_list:
+                    atom_list.append(cls.atoms[i].symbol)
+                    count_list.append(0)
+            atom_list.sort()
+            for i1 in range(len(cls.atoms)):
+                for i2 in range(len(atom_list)):
+                    if cls.atoms[i1].symbol == atom_list[i2]:
+                        count_list += 1
+            result = ""
+            for i in range(len(atom_list)):
+                result += (atom_list[i] + str(count_list[i]))
+            cls.molecular_formula = result
+        return cls.molecular_formula
 
 
-def molecules_equal(a: Molecule, b: Molecule, same_order=True, simplified=True):
+def atoms_distance(a: Atom, b: Atom, simplified=False):
+    diff_vector = a.coord - b.coord
+    if simplified:
+        # Sometimes, when performing especially heavy calculations, it might be useful to take crude simplified approach
+        return abs(diff_vector[1, 1]) + abs(diff_vector[2, 1]) + abs(diff_vector[3, 1])
+    else:
+        # But usually numpy is fast enough, so it's False by default
+        return np.linalg.norm(diff_vector)
+
+
+def atoms_connected(a: Atom, b: Atom, simplified=False, cutoff=0.025):
+    distance = atoms_distance(a, b, simplified)
+    covalent_sum = covalent_radius[a.symbol] + covalent_radius[b.symbol]
+    if abs(covalent_sum - distance) <= cutoff:
+        return True
+    else:
+        return False
+
+
+def molecules_equal(a: Molecule, b: Molecule, same_order=True, simplified=False):
     diff = 0.0
     # Simple tests first to potentially save the hassle
     if len(a.atoms) != len(b.atoms):
         return False
-    if a.generate_molecular_formula() != b.generate_molecular_formula():
+    if a.get_molecular_formula() != b.get_molecular_formula():
         return False
     if not same_order:
         # For symmetry cloned molecules it's safe to assume that the order of atoms is still the same
         # But generally it's not always the case, especially if molecules originate from different sources
         for i1 in range(len(a.atoms)):
             current_min = 1000
-            current_diff = 0.0
             for i2 in range(len(b.atoms)):
                 # We look for the closest atom with the same symbol
-                diff_vector = a.atoms[i1].coord - b.atoms[i2].coord
-                if simplified and (a.atoms[i1].symbol == b.atoms[i2].symbol):
-                    # We have to calculate A LOT OF squares and roots, so it's generally fine to use approximation
-                    current_diff = abs(diff_vector[1, 1]) + abs(diff_vector[2, 1]) + abs(diff_vector[3, 1])
-                elif not simplified and (a.atoms[i1].symbol == b.atoms[i2].symbol):
-                    current_diff = np.sqrt(diff_vector[1, 1] ** 2 + diff_vector[2, 1] ** 2 + diff_vector[3, 1] ** 2)
+                current_diff = atoms_distance(a.atoms[i1], b.atoms[i2], simplified)
                 if current_diff < current_min:
                     current_min = current_diff
             diff += current_min
     else:
         for i1 in range(len(a.atoms)):
-            diff_vector = a.atoms[i1].coord - b.atoms[i1].coord
-            if simplified:
-                diff += abs(diff_vector[1, 1]) + abs(diff_vector[2, 1]) + abs(diff_vector[3, 1])
-            else:
-                diff += np.sqrt(diff_vector[1, 1] ** 2 + diff_vector[2, 1] ** 2 + diff_vector[3, 1] ** 2)
+            diff = atoms_distance(a.atoms[i1], b.atoms[i1], simplified)
     if diff < 0.05:
         return True
     else:
         return False
+
+
+def molecules_connected(a: Molecule, b: Molecule, simpliifed=False):
+    for i1 in Molecule.atoms:
+        for i2 in Molecule.atoms:
+            if atoms_connected(i1, i2, simpliifed):
+                return True
+    return False
 
 
 class CifFile:
