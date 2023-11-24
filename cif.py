@@ -352,7 +352,7 @@ class Molecule:
                 elif cls.inertia_x != np.zeros((3, 1)):
                     cls.inertia_x = (cls.inertia_eigenvalues[index[0] - 1:index[0], :] /
                                      np.linalg.norm(cls.inertia_eigenvalues[index[0] - 1:index[0], :]))
-                internal_e[index[0],0] = -1.0
+                internal_e[index[0], 0] = -1.0
         return cls.inertia_z, cls.inertia_y, cls.inertia_x
 
 
@@ -389,6 +389,31 @@ def molecules_connected(a: Molecule, b: Molecule, simplified=False):
             if atoms_connected(i1, i2, simplified):
                 return True
     return False
+
+
+def molecules_match_rotation(rotated: Molecule, static: Molecule):
+    # Extract principal axes for each molecule
+    # Static stays in place, rotated is transformed
+    rotated_x, rotated_y, rotated_z = rotated.get_inertia_tensor()
+    static_x, static_y, static_z = static.get_inertia_tensor()
+    # Since the vectors are stored in ((3,1)) shape we need transpose them first
+    rotated_x = np.transpose(rotated_x)
+    rotated_y = np.transpose(rotated_y)
+    rotated_z = np.transpose(rotated_z)
+    static_x = np.transpose(static_x)
+    static_y = np.transpose(static_y)
+    static_z = np.transpose(static_z)
+    # Create matrices that rotate standard coordinate system 0 to molecule's principal axes
+    rot_mat_rotated = np.array([[rotated_x],[rotated_y],[rotated_z]])
+    rot_mat_static = np.array([[static_x], [static_y], [static_z]])
+    # Combine two rotations: Rotated -> 0  (inverted 0 -> Rotated) and 0 -> Static
+    final_rotation = np.matmul(np.linalg.inv(rot_mat_rotated), rot_mat_static)
+    # We translate Rotated to 0 system, perform rotation, and translate it back
+    mass_center = rotated.get_mass_center()
+    for i in range(len(rotated.atoms)):
+        rotated.atoms[i].coord -= mass_center
+        rotated.atoms[i].coord = np.transpose(np.matmul(np.transpose(rotated.atoms[i].coord), final_rotation))
+        rotated.atoms[i].coord += mass_center
 
 
 class CifFile:
