@@ -1,3 +1,18 @@
+"""
+molecular.py is a unit of Kasuga computational package responsible for all operations with molecular geometries such as:
+    1. Reading, writing and processing .cif files containing crystal packing data.
+    2. Reading, writing and processing .xyz, .mol2 and .pdb files containing single molecule and molecular cluster data
+    3. Reading and processing .out (Gaussian), .cube and .fchk files containing computational properties for single
+        molecules and molecular clusters.
+    4. Symmetry operations with single molecules and molecular clusters, molecular cluster generation.
+    5. Modification of a molecular geometry: changing bond lengths, angles and dihedral angles, changing atomic and
+        molecular properties.
+
+As a rule of thumb, if you need to process and modify molecular geometries or read and store any property (such as
+electron density) of a single molecule - it is most likely handled by molecular.py unit. Any other, more advanced
+processing down the line (such as integration, IC and ISC calculations) is handled by other modules.
+"""
+
 import os
 import kasuga_io
 import numpy as np
@@ -651,3 +666,11 @@ class CifFile:
                     a.coord_abc[1, 1] = cls.loops[i1][i2]['atom_site_fract_y']
                     a.coord_abc[2, 1] = cls.loops[i1][i2]['atom_site_fract_z']
                     cls.as_unit.atoms.append(a)
+
+
+# Cluster is an array of molecules either natively generated from an associated CifFile or appended through other means
+class Cluster:
+    molecules = [Molecule]
+    cif = CifFile
+
+
