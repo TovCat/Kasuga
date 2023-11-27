@@ -235,24 +235,40 @@ class Vector:
     def __init__(self):
         self.coord = np.zeros(3)
 
-    def transform_cartesian(self, matrix: np.array):
+    def transform(self, matrix: np.array):
         self.coord = np.matmul(self.coord, matrix)
 
+    def inverse(self, inversion=np.array([0, 0, 0])):
+        shift = inversion - self.coord
+        self.coord + 2 * shift
 
-def rotational_matrix(axis_vector: Vector, angle: float):
-    axis = np.linalg.norm(axis_vector.coord)
-    angle_rad = np.deg2rad(angle)
-    matrix = np.zeros((3, 3))
-    matrix[0, 0] = np.cos(angle_rad) + axis[0, 0]**2*(1 - np.cos(angle_rad))
-    matrix[0, 1] = axis[0]*axis[1]*(1 - np.cos(angle_rad)) - axis[2]*np.sin(angle_rad)
-    matrix[0, 2] = axis[0]*axis[0, 2]*(1 - np.cos(angle_rad)) + axis[1]*np.sin(angle_rad)
-    matrix[1, 1] = np.cos(angle_rad) + axis[1]**2*(1 - np.cos(angle_rad))
-    matrix[1, 2] = axis[1]*axis[2]*(1 - np.cos(angle_rad)) - axis[0]*np.sin(angle_rad)
-    matrix[2, 2] = np.cos(angle_rad) + axis[2]**2*(1 - np.cos(angle_rad))
-    matrix[1, 0] = matrix[0, 1]
-    matrix[2, 0] = matrix[0, 2]
-    matrix[2, 1] = matrix[1, 2]
-    return matrix
+    def mirror_x_a(self):
+        self.coord[0] = -1 * self.coord[0]
+
+    def mirror_y_b(self):
+        self.coord[1] = -1 * self.coord[1]
+
+    def mirror_z_c(self):
+        self.coord[2] = -1 * self.coord[2]
+
+    def mirror(self, normal=np.array([1, 0, 0]), point=np.zeros(3)):
+        print(1)
+
+    def rotate(self, angle: float, axis_vector=np.zeros(3)):
+        axis = np.linalg.norm(axis_vector)
+        angle_rad = np.deg2rad(angle)
+        matrix = np.zeros((3, 3))
+        matrix[0, 0] = np.cos(angle_rad) + axis[0, 0]**2*(1 - np.cos(angle_rad))
+        matrix[0, 1] = axis[0]*axis[1]*(1 - np.cos(angle_rad)) - axis[2]*np.sin(angle_rad)
+        matrix[0, 2] = axis[0]*axis[0, 2]*(1 - np.cos(angle_rad)) + axis[1]*np.sin(angle_rad)
+        matrix[1, 1] = np.cos(angle_rad) + axis[1]**2*(1 - np.cos(angle_rad))
+        matrix[1, 2] = axis[1]*axis[2]*(1 - np.cos(angle_rad)) - axis[0]*np.sin(angle_rad)
+        matrix[2, 2] = np.cos(angle_rad) + axis[2]**2*(1 - np.cos(angle_rad))
+        matrix[1, 0] = matrix[0, 1]
+        matrix[2, 0] = matrix[0, 2]
+        matrix[2, 1] = matrix[1, 2]
+        self.coord = np.matmul(self.coord, matrix)
+        return matrix
 
 
 class Atom:
