@@ -227,17 +227,31 @@ covalent_radius = {
 }
 
 
-def rotation_matrix(axis, angle):
+class Vector:
     """
-    Generate rotation matrix for alpha, beta and gamma angles (x, y, z).
+    Vector is a base class containing coordinates represented as a np.array(3)
     """
+
+    def __init__(self):
+        self.coord = np.zeros(3)
+
+    def transform_cartesian(self, matrix: np.array):
+        self.coord = np.matmul(self.coord, matrix)
+
+
+def rotational_matrix(axis_vector: Vector, angle: float):
+    axis = np.linalg.norm(axis_vector.coord)
+    angle_rad = np.deg2rad(angle)
     matrix = np.zeros((3, 3))
-    if axis == "a":
-        matrix = np.array([[1, 0, 0], [0, np.cos(angle), -1 * np.sin(angle)], [0, np.sin(angle), np.cos(angle)]])
-    elif axis == "b":
-        matrix = np.array([[np.cos(angle), 0, np.sin(angle)], [0, 1, 0], [-1 * np.sin(angle), 0, np.cos(angle)]])
-    elif axis == "c":
-        matrix = np.array([[np.cos(angle), -1 * np.sin(angle), 0], [np.sin(angle), np.cos(angle), 0], [0, 0, 1]])
+    matrix[0, 0] = np.cos(angle_rad) + axis[0, 0]**2*(1 - np.cos(angle_rad))
+    matrix[0, 1] = axis[0]*axis[1]*(1 - np.cos(angle_rad)) - axis[2]*np.sin(angle_rad)
+    matrix[0, 2] = axis[0]*axis[0, 2]*(1 - np.cos(angle_rad)) + axis[1]*np.sin(angle_rad)
+    matrix[1, 1] = np.cos(angle_rad) + axis[1]**2*(1 - np.cos(angle_rad))
+    matrix[1, 2] = axis[1]*axis[2]*(1 - np.cos(angle_rad)) - axis[0]*np.sin(angle_rad)
+    matrix[2, 2] = np.cos(angle_rad) + axis[2]**2*(1 - np.cos(angle_rad))
+    matrix[1, 0] = matrix[0, 1]
+    matrix[2, 0] = matrix[0, 2]
+    matrix[2, 1] = matrix[1, 2]
     return matrix
 
 
