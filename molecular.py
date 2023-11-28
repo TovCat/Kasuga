@@ -252,21 +252,35 @@ class Vector:
         self.coord[2] = -1 * self.coord[2]
 
     def mirror(self, normal=np.array([1, 0, 0]), point=np.zeros(3)):
-        print(1)
+        # Calculate plane coefficients
+        n = normal / np.linalg.norm(normal)
+        a = normal[0]
+        b = normal[1]
+        c = normal[2]
+        d = -1 * (a * point[0] + b * point[1] + c * point[2])
+        distance = abs(a * self.coord[0] + b * self.coord[1] + c * self.coord[3] + d) / np.sqrt(a**2 + b**2 + c**2)
+        test1 = self.coord + 2 * n * distance
+        test2 = self.coord - 2 * n * distance
+        distance_test1 = abs(a * test1[0] + b * test1[1] + c * test1[3] + d) / np.sqrt(a**2 + b**2 + c**2)
+        distance_test2 = abs(a * test2[0] + b * test2[1] + c * test2[3] + d) / np.sqrt(a ** 2 + b ** 2 + c ** 2)
+        if distance_test1 < distance_test2:
+            self.coord = test1
+        else:
+            self.coord = test2
+
 
     def rotate(self, angle: float, axis_vector=np.zeros(3)):
-        axis = np.linalg.norm(axis_vector)
+        axis = axis_vector / np.linalg.norm(axis_vector)
         angle_rad = np.deg2rad(angle)
         matrix = np.zeros((3, 3))
-        matrix[0, 0] = np.cos(angle_rad) + axis[0, 0]**2*(1 - np.cos(angle_rad))
-        matrix[0, 1] = axis[0]*axis[1]*(1 - np.cos(angle_rad)) - axis[2]*np.sin(angle_rad)
-        matrix[0, 2] = axis[0]*axis[0, 2]*(1 - np.cos(angle_rad)) + axis[1]*np.sin(angle_rad)
-        matrix[1, 1] = np.cos(angle_rad) + axis[1]**2*(1 - np.cos(angle_rad))
-        matrix[1, 2] = axis[1]*axis[2]*(1 - np.cos(angle_rad)) - axis[0]*np.sin(angle_rad)
-        matrix[2, 2] = np.cos(angle_rad) + axis[2]**2*(1 - np.cos(angle_rad))
+        matrix[0, 0] = np.cos(angle_rad) + axis[0] ** 2 * (1 - np.cos(angle_rad))
+        matrix[0, 1] = axis[0] * axis[1] * (1 - np.cos(angle_rad)) - axis[2] * np.sin(angle_rad)
+        matrix[0, 2] = axis[0] * axis[0] * (1 - np.cos(angle_rad)) + axis[1] * np.sin(angle_rad)
+        matrix[1, 1] = np.cos(angle_rad) + axis[1] ** 2 * (1 - np.cos(angle_rad))
+        matrix[1, 2] = axis[1] * axis[2] * (1 - np.cos(angle_rad)) - axis[0] * np.sin(angle_rad)
+        matrix[2, 2] = np.cos(angle_rad) + axis[2] ** 2 * (1 - np.cos(angle_rad))
         matrix[1, 0] = matrix[0, 1]
         matrix[2, 0] = matrix[0, 2]
-        matrix[2, 1] = matrix[1, 2]
         self.coord = np.matmul(self.coord, matrix)
         return matrix
 
