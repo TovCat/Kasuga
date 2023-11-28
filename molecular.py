@@ -242,15 +242,6 @@ class Vector:
         shift = inversion - self.coord
         self.coord + 2 * shift
 
-    def mirror_x_a(self):
-        self.coord[0] = -1 * self.coord[0]
-
-    def mirror_y_b(self):
-        self.coord[1] = -1 * self.coord[1]
-
-    def mirror_z_c(self):
-        self.coord[2] = -1 * self.coord[2]
-
     def mirror(self, normal=np.array([1, 0, 0]), point=np.zeros(3)):
         # Calculate plane coefficients
         n = normal / np.linalg.norm(normal)
@@ -268,8 +259,16 @@ class Vector:
         else:
             self.coord = test2
 
+    def simple_mirror(self, plane="xa", plane_point=np.zeros(3)):
+        match plane:
+            case "x" | "a":
+                self.mirror(self, normal=np.array([1, 0, 0]), point=plane_point)
+            case "y" | "b":
+                self.mirror(self, normal=np.array([0, 1, 0]), point=plane_point)
+            case "z" | "c":
+                self.mirror(self, normal=np.array([0, 0, 1]), point=plane_point)
 
-    def rotate(self, angle: float, axis_vector=np.zeros(3)):
+    def rotate(self, angle: float, axis_vector: np.array):
         axis = axis_vector / np.linalg.norm(axis_vector)
         angle_rad = np.deg2rad(angle)
         matrix = np.zeros((3, 3))
@@ -282,21 +281,70 @@ class Vector:
         matrix[1, 0] = matrix[0, 1]
         matrix[2, 0] = matrix[0, 2]
         self.coord = np.matmul(self.coord, matrix)
-        return matrix
+
+    def pivot(self, angle: float, pivot_point: np.array, pivot_vector: np.array):
+        pivot_diff = self.coord - pivot_point
+        pivot_vector = pivot_vector / np.linalg.norm(pivot_vector)
+        angle_rad = np.deg2rad(angle)
+        matrix = np.zeros((3, 3))
+        matrix[0, 0] = np.cos(angle_rad) + pivot_vector[0] ** 2 * (1 - np.cos(angle_rad))
+        matrix[0, 1] = pivot_vector[0] * pivot_vector[1] * (1 - np.cos(angle_rad)) - pivot_vector[2] * np.sin(angle_rad)
+        matrix[0, 2] = pivot_vector[0] * pivot_vector[0] * (1 - np.cos(angle_rad)) + pivot_vector[1] * np.sin(angle_rad)
+        matrix[1, 1] = np.cos(angle_rad) + pivot_vector[1] ** 2 * (1 - np.cos(angle_rad))
+        matrix[1, 2] = pivot_vector[1] * pivot_vector[2] * (1 - np.cos(angle_rad)) - pivot_vector[0] * np.sin(angle_rad)
+        matrix[2, 2] = np.cos(angle_rad) + pivot_vector[2] ** 2 * (1 - np.cos(angle_rad))
+        matrix[1, 0] = matrix[0, 1]
+        matrix[2, 0] = matrix[0, 2]
+        pivot_diff_rotated = np.matmul(pivot_diff, matrix)
+        pivot_translation = pivot_diff - pivot_diff_rotated
+        self.coord += pivot_translation
+
+    def simple_rotate(self, axis="x2"):
+        match axis:
+            case "x2" | "a2":
+                self.rotate(self, angle=np.deg2rad(180), axis_vector=np.array([1, 0, 0]))
+            case "x3" | "a3":
+                self.rotate(self, angle=np.deg2rad(120), axis_vector=np.array([1, 0, 0]))
+            case "x4" | "a4":
+                self.rotate(self, angle=np.deg2rad(90), axis_vector=np.array([1, 0, 0]))
+            case "x6" | "a6":
+                self.rotate(self, angle=np.deg2rad(60), axis_vector=np.array([1, 0, 0]))
+            case "y2" | "b2":
+                self.rotate(self, angle=np.deg2rad(180), axis_vector=np.array([0, 1, 0]))
+            case "y3" | "b3":
+                self.rotate(self, angle=np.deg2rad(120), axis_vector=np.array([0, 1, 0]))
+            case "y4" | "b4":
+                self.rotate(self, angle=np.deg2rad(90), axis_vector=np.array([0, 1, 0]))
+            case "y6" | "b6":
+                self.rotate(self, angle=np.deg2rad(60), axis_vector=np.array([0, 1, 0]))
+            case "z2" | "c2":
+                self.rotate(self, angle=np.deg2rad(180), axis_vector=np.array([0, 0, 1]))
+            case "z3" | "c3":
+                self.rotate(self, angle=np.deg2rad(120), axis_vector=np.array([0, 0, 1]))
+            case "z4" | "c4":
+                self.rotate(self, angle=np.deg2rad(90), axis_vector=np.array([0, 0, 1]))
+            case "z6" | "c6":
+                self.rotate(self, angle=np.deg2rad(60), axis_vector=np.array([0, 0, 1]))
+
+    #def improper_rotate(self, angle: float, axis_vector=np.zeros(3), point=np.zeros(3)):
+    #def screw_axis
+    #def glide_plane
 
 
-class Atom:
-    weight = float  # Atomic weight
-    symbol = str  # Chemical symbol of an atom
-    coord = np.zeros((3, 1))  # Cartesian coordinates
-    coord_abc = np.zeros((3, 1))  # Coordinates in the abc-system
+class Atom(Vector):
 
-    @classmethod
-    def assign_weight(cls):
-        if cls.symbol in element_weight:
-            cls.weight = element_weight[cls.symbol]
+    def assign_weight(self):
+        if self.symbol in element_weight:
+            self.weight = element_weight[self.symbol]
         else:
-            kasuga_io.quit_with_error(f'Unrecognized {cls.symbol} atom encountered!')
+            kasuga_io.quit_with_error(f'Unrecognized {self.symbol} atom encountered!')
+
+    def __init__(self, symbol=""):
+        self.weight = float  # Atomic weight
+        self.symbol = str  # Chemical symbol of an atom
+        super().__init__()
+        if symbol != "":
+            self.assign_weight()
 
 
 def atoms_distance(a: Atom, b: Atom, simplified=False):
