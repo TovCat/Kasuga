@@ -238,9 +238,9 @@ class Vector:
     def transform(self, matrix: np.array):
         self.coord = np.matmul(self.coord, matrix)
 
-    def inverse(self, inversion=np.array([0, 0, 0])):
+    def invert(self, inversion=np.array([0, 0, 0])):
         shift = inversion - self.coord
-        self.coord + 2 * shift
+        self.coord += 2 * shift
 
     def mirror(self, normal=np.array([1, 0, 0]), point=np.zeros(3)):
         # Calculate plane coefficients
@@ -259,14 +259,14 @@ class Vector:
         else:
             self.coord = test2
 
-    def simple_mirror(self, plane="xa", plane_point=np.zeros(3)):
+    def xyz_mirror(self, plane="x", plane_point=np.zeros(3)):
         match plane:
             case "x" | "a":
-                self.mirror(self, normal=np.array([1, 0, 0]), point=plane_point)
+                self.mirror(np.array([1, 0, 0]), plane_point)
             case "y" | "b":
-                self.mirror(self, normal=np.array([0, 1, 0]), point=plane_point)
+                self.mirror(np.array([0, 1, 0]), plane_point)
             case "z" | "c":
-                self.mirror(self, normal=np.array([0, 0, 1]), point=plane_point)
+                self.mirror(np.array([0, 0, 1]), plane_point)
 
     def rotate(self, angle: float, axis_vector: np.array):
         axis = axis_vector / np.linalg.norm(axis_vector)
@@ -299,32 +299,32 @@ class Vector:
         pivot_translation = pivot_diff - pivot_diff_rotated
         self.coord += pivot_translation
 
-    def simple_rotate(self, axis="x2"):
+    def xyz_rotate(self, axis="x2"):
         match axis:
             case "x2" | "a2":
-                self.rotate(self, angle=np.deg2rad(180), axis_vector=np.array([1, 0, 0]))
+                self.rotate(np.deg2rad(180), np.array([1, 0, 0]))
             case "x3" | "a3":
-                self.rotate(self, angle=np.deg2rad(120), axis_vector=np.array([1, 0, 0]))
+                self.rotate(np.deg2rad(120), np.array([1, 0, 0]))
             case "x4" | "a4":
-                self.rotate(self, angle=np.deg2rad(90), axis_vector=np.array([1, 0, 0]))
+                self.rotate(np.deg2rad(90), np.array([1, 0, 0]))
             case "x6" | "a6":
-                self.rotate(self, angle=np.deg2rad(60), axis_vector=np.array([1, 0, 0]))
+                self.rotate(np.deg2rad(60), np.array([1, 0, 0]))
             case "y2" | "b2":
-                self.rotate(self, angle=np.deg2rad(180), axis_vector=np.array([0, 1, 0]))
+                self.rotate(np.deg2rad(180), np.array([0, 1, 0]))
             case "y3" | "b3":
-                self.rotate(self, angle=np.deg2rad(120), axis_vector=np.array([0, 1, 0]))
+                self.rotate(np.deg2rad(120), np.array([0, 1, 0]))
             case "y4" | "b4":
-                self.rotate(self, angle=np.deg2rad(90), axis_vector=np.array([0, 1, 0]))
+                self.rotate(np.deg2rad(90), np.array([0, 1, 0]))
             case "y6" | "b6":
-                self.rotate(self, angle=np.deg2rad(60), axis_vector=np.array([0, 1, 0]))
+                self.rotate(np.deg2rad(60), np.array([0, 1, 0]))
             case "z2" | "c2":
-                self.rotate(self, angle=np.deg2rad(180), axis_vector=np.array([0, 0, 1]))
+                self.rotate(np.deg2rad(180), np.array([0, 0, 1]))
             case "z3" | "c3":
-                self.rotate(self, angle=np.deg2rad(120), axis_vector=np.array([0, 0, 1]))
+                self.rotate(np.deg2rad(120), np.array([0, 0, 1]))
             case "z4" | "c4":
-                self.rotate(self, angle=np.deg2rad(90), axis_vector=np.array([0, 0, 1]))
+                self.rotate(np.deg2rad(90), np.array([0, 0, 1]))
             case "z6" | "c6":
-                self.rotate(self, angle=np.deg2rad(60), axis_vector=np.array([0, 0, 1]))
+                self.rotate(np.deg2rad(60), np.array([0, 0, 1]))
 
     #def improper_rotate(self, angle: float, axis_vector=np.zeros(3), point=np.zeros(3)):
     #def screw_axis
