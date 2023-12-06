@@ -298,7 +298,7 @@ class Vector:
         Rotate Vector around arbitrary axis.
         :param angle: angle of rotation (in degrees)
         :param axis_point: point of origin for rotation axis (np.array) (np.array, [0,0,0] by default)
-        :param axis_vector: 
+        :param axis_vector:
         """
         axis_diff = self.coord - axis_point
         axis_vector = axis_vector / np.linalg.norm(axis_vector)
@@ -316,9 +316,17 @@ class Vector:
         axis_translation = axis_diff - axis_diff_rotated
         self.coord += axis_translation
 
-    #def improper_rotate(self, angle: float, axis_vector=np.zeros(3), point=np.zeros(3)):
-    #def screw_axis
-    #def glide_plane
+    def improper_rotate(self, angle: float, axis_vector=np.zeros(3), point=np.zeros(3)):
+        self.rotate(angle, axis_vector, point)
+        self.mirror(axis_vector, point)
+
+    def screw_axis(self, angle: float, axis_vector=np.zeros(3), point=np.zeros(3), translation_vector=np.zeros(3)):
+        self.rotate(angle, axis_vector, point)
+        self.coord += translation_vector
+
+    def glide_plane(self, normal=np.array([1, 0, 0]), point=np.zeros(3), translation_vector=np.zeros(3)):
+        self.mirror(normal, point)
+        self.coord += translation_vector
 
 
 class Atom(Vector):
