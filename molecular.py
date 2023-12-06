@@ -236,95 +236,85 @@ class Vector:
         self.coord = np.zeros(3)
 
     def transform(self, matrix: np.array):
+        """
+        General method for vector coordinate transformation using a transformation matrix.
+        :param matrix: transformation 3x3 matrix (np.array)
+        """
         self.coord = np.matmul(self.coord, matrix)
 
-    def invert(self, inversion=np.array([0, 0, 0])):
-        shift = inversion - self.coord
+    def invert(self, inv_coord=np.zeros(3)):
+        """
+        Invert vector around arbitrary center.
+        :param inv_coord: inversion center coordinates (np.array, [0,0,0] by default)
+        """
+        shift = inv_coord - self.coord
         self.coord += 2 * shift
 
     def mirror(self, normal=np.array([1, 0, 0]), point=np.zeros(3)):
-        # Calculate plane coefficients
+        """
+        Mirror vector in an arbitrary mirror plane
+        :param normal: normal vector of a mirror plane (np.array, [1,0,0] bu default)
+        :param point: arbitrary point that belongs to a mirror plane (np.array, [0,0,0] by default)
+        :return:
+        """
+        # normalize n just to be safe
         n = normal / np.linalg.norm(normal)
+        # plane equation coefficients
         a = normal[0]
         b = normal[1]
         c = normal[2]
         d = -1 * (a * point[0] + b * point[1] + c * point[2])
+        # distance between a point (our vector) and a mirror plane
         distance = abs(a * self.coord[0] + b * self.coord[1] + c * self.coord[3] + d) / np.sqrt(a**2 + b**2 + c**2)
+        # provided normal vector can either face the same direction as mirrored point or the opposite
         test1 = self.coord + 2 * n * distance
         test2 = self.coord - 2 * n * distance
         distance_test1 = abs(a * test1[0] + b * test1[1] + c * test1[3] + d) / np.sqrt(a**2 + b**2 + c**2)
-        distance_test2 = abs(a * test2[0] + b * test2[1] + c * test2[3] + d) / np.sqrt(a ** 2 + b ** 2 + c ** 2)
+        distance_test2 = abs(a * test2[0] + b * test2[1] + c * test2[3] + d) / np.sqrt(a**2 + b**2 + c**2)
         if distance_test1 < distance_test2:
+            # same direction
             self.coord = test1
         else:
+            # opposite direction
             self.coord = test2
 
-    def xyz_mirror(self, plane="x", plane_point=np.zeros(3)):
+    def xyz_mirror(self, plane="xy", plane_point=np.zeros(3)):
+        """
+        Simplified Vector.mirror method to reflect vector in xy, xz and yz planes
+        :param plane: string representing one of default planes: "xy", "xz", "yz" or "ab", "ac", "bc" for fractional coordinates.
+        :param plane_point: arbitrary point that belongs to a mirror plane (np.array, [0,0,0] by default)
+        :return:
+        """
         match plane:
-            case "x" | "a":
-                self.mirror(np.array([1, 0, 0]), plane_point)
-            case "y" | "b":
-                self.mirror(np.array([0, 1, 0]), plane_point)
-            case "z" | "c":
+            case "xy" | "ab":
                 self.mirror(np.array([0, 0, 1]), plane_point)
+            case "xz" | "ac":
+                self.mirror(np.array([0, 1, 0]), plane_point)
+            case "yz" | "bc":
+                self.mirror(np.array([1, 0, 0]), plane_point)
 
-    def rotate(self, angle: float, axis_vector: np.array):
-        axis = axis_vector / np.linalg.norm(axis_vector)
+    def rotate(self, angle: float, axis_vector: np.array, axis_point=np.zeros(3)):
+        """
+        Rotate Vector around arbitrary axis.
+        :param angle: angle of rotation (in degrees)
+        :param axis_point: point of origin for rotation axis (np.array) (np.array, [0,0,0] by default)
+        :param axis_vector: 
+        """
+        axis_diff = self.coord - axis_point
+        axis_vector = axis_vector / np.linalg.norm(axis_vector)
         angle_rad = np.deg2rad(angle)
         matrix = np.zeros((3, 3))
-        matrix[0, 0] = np.cos(angle_rad) + axis[0] ** 2 * (1 - np.cos(angle_rad))
-        matrix[0, 1] = axis[0] * axis[1] * (1 - np.cos(angle_rad)) - axis[2] * np.sin(angle_rad)
-        matrix[0, 2] = axis[0] * axis[0] * (1 - np.cos(angle_rad)) + axis[1] * np.sin(angle_rad)
-        matrix[1, 1] = np.cos(angle_rad) + axis[1] ** 2 * (1 - np.cos(angle_rad))
-        matrix[1, 2] = axis[1] * axis[2] * (1 - np.cos(angle_rad)) - axis[0] * np.sin(angle_rad)
-        matrix[2, 2] = np.cos(angle_rad) + axis[2] ** 2 * (1 - np.cos(angle_rad))
+        matrix[0, 0] = np.cos(angle_rad) + axis_vector[0] ** 2 * (1 - np.cos(angle_rad))
+        matrix[0, 1] = axis_vector[0] * axis_vector[1] * (1 - np.cos(angle_rad)) - axis_vector[2] * np.sin(angle_rad)
+        matrix[0, 2] = axis_vector[0] * axis_vector[0] * (1 - np.cos(angle_rad)) + axis_vector[1] * np.sin(angle_rad)
+        matrix[1, 1] = np.cos(angle_rad) + axis_vector[1] ** 2 * (1 - np.cos(angle_rad))
+        matrix[1, 2] = axis_vector[1] * axis_vector[2] * (1 - np.cos(angle_rad)) - axis_vector[0] * np.sin(angle_rad)
+        matrix[2, 2] = np.cos(angle_rad) + axis_vector[2] ** 2 * (1 - np.cos(angle_rad))
         matrix[1, 0] = matrix[0, 1]
         matrix[2, 0] = matrix[0, 2]
-        self.coord = np.matmul(self.coord, matrix)
-
-    def pivot(self, angle: float, pivot_point: np.array, pivot_vector: np.array):
-        pivot_diff = self.coord - pivot_point
-        pivot_vector = pivot_vector / np.linalg.norm(pivot_vector)
-        angle_rad = np.deg2rad(angle)
-        matrix = np.zeros((3, 3))
-        matrix[0, 0] = np.cos(angle_rad) + pivot_vector[0] ** 2 * (1 - np.cos(angle_rad))
-        matrix[0, 1] = pivot_vector[0] * pivot_vector[1] * (1 - np.cos(angle_rad)) - pivot_vector[2] * np.sin(angle_rad)
-        matrix[0, 2] = pivot_vector[0] * pivot_vector[0] * (1 - np.cos(angle_rad)) + pivot_vector[1] * np.sin(angle_rad)
-        matrix[1, 1] = np.cos(angle_rad) + pivot_vector[1] ** 2 * (1 - np.cos(angle_rad))
-        matrix[1, 2] = pivot_vector[1] * pivot_vector[2] * (1 - np.cos(angle_rad)) - pivot_vector[0] * np.sin(angle_rad)
-        matrix[2, 2] = np.cos(angle_rad) + pivot_vector[2] ** 2 * (1 - np.cos(angle_rad))
-        matrix[1, 0] = matrix[0, 1]
-        matrix[2, 0] = matrix[0, 2]
-        pivot_diff_rotated = np.matmul(pivot_diff, matrix)
-        pivot_translation = pivot_diff - pivot_diff_rotated
-        self.coord += pivot_translation
-
-    def xyz_rotate(self, axis="x2"):
-        match axis:
-            case "x2" | "a2":
-                self.rotate(np.deg2rad(180), np.array([1, 0, 0]))
-            case "x3" | "a3":
-                self.rotate(np.deg2rad(120), np.array([1, 0, 0]))
-            case "x4" | "a4":
-                self.rotate(np.deg2rad(90), np.array([1, 0, 0]))
-            case "x6" | "a6":
-                self.rotate(np.deg2rad(60), np.array([1, 0, 0]))
-            case "y2" | "b2":
-                self.rotate(np.deg2rad(180), np.array([0, 1, 0]))
-            case "y3" | "b3":
-                self.rotate(np.deg2rad(120), np.array([0, 1, 0]))
-            case "y4" | "b4":
-                self.rotate(np.deg2rad(90), np.array([0, 1, 0]))
-            case "y6" | "b6":
-                self.rotate(np.deg2rad(60), np.array([0, 1, 0]))
-            case "z2" | "c2":
-                self.rotate(np.deg2rad(180), np.array([0, 0, 1]))
-            case "z3" | "c3":
-                self.rotate(np.deg2rad(120), np.array([0, 0, 1]))
-            case "z4" | "c4":
-                self.rotate(np.deg2rad(90), np.array([0, 0, 1]))
-            case "z6" | "c6":
-                self.rotate(np.deg2rad(60), np.array([0, 0, 1]))
+        axis_diff_rotated = np.matmul(axis_diff, matrix)
+        axis_translation = axis_diff - axis_diff_rotated
+        self.coord += axis_translation
 
     #def improper_rotate(self, angle: float, axis_vector=np.zeros(3), point=np.zeros(3)):
     #def screw_axis
