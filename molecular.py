@@ -287,7 +287,7 @@ class Vector:
     def mirror(self, normal=np.array([1, 0, 0]), point=np.zeros(3)):
         """
         Mirror vector in an arbitrary mirror plane
-        :param normal: normal vector of a mirror plane (np.array, [1,0,0] bu default)
+        :param normal: normal vector of a mirror plane (np.array, [1,0,0] by default)
         :param point: arbitrary point that belongs to a mirror plane (np.array, [0,0,0] by default)
         :return:
         """
@@ -314,7 +314,7 @@ class Vector:
 
     def xyz_mirror(self, plane="xy", plane_point=np.zeros(3)):
         """
-        Simplified Vector.mirror method to reflect vector in xy, xz and yz planes
+        Simplified mirror method to reflect vector in xy, xz and yz planes
         :param plane: string representing one of default planes: "xy", "xz", "yz" or "ab", "ac", "bc" for fractional coordinates.
         :param plane_point: arbitrary point that belongs to a mirror plane (np.array, [0,0,0] by default)
         :return:
