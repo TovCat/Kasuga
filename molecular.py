@@ -11,6 +11,40 @@ molecular.py is a unit of Kasuga computational package responsible for all opera
 As a rule of thumb, if you need to process and modify molecular geometries or read and store any property (such as
 electron density) of a single molecule - it is most likely handled by molecular.py unit. Any other, more advanced
 processing down the line (such as integration, IC and ISC calculations) is handled by other modules.
+
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⣀⣤⣤⣤⣤⣤⣤⣤⣤⣤⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣤⣴⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣶⣤⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣴⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣦⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣶⣿⢿⡿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⢿⣿⢿⣿⢿⡿⣿⡿⣿⣿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣾⣿⣯⣟⣯⣿⣿⣽⣾⣿⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⣡⢺⡆⠙⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣿⣷⣻⣯⣿⣷⣆⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⢹⣿⣿⡿⢋⠞⠃⠀⣷⠀⠈⠻⣿⣿⣿⣿⠛⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣇⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣟⣡⣿⣿⡿⠧⠤⣾⡿⢋⠤⠊⠀⠀⠀⢸⡄⠀⠀⠈⠻⣿⣿⡦⠬⠽⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡆⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⠟⠁⠀⣸⣿⣯⣤⣤⣼⣏⡠⠎⠀⠀⠀⠀⠀⠈⢷⠀⠀⠀⠀⣈⣻⣷⣤⣤⣬⣻⣧⠙⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⣼⣿⣿⣿⣿⣿⣿⡿⠋⢀⣴⢾⢏⣿⣿⣿⣿⣿⣮⣅⠀⠀⠀⠀⠀⠀⠀⠘⠙⠀⠀⠀⣩⣵⣿⣿⣿⣷⣮⡙⢳⣦⠻⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⣿⣿⣿⡿⠃⢠⣿⠁⢠⣿⣿⣿⣿⣿⣿⣿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⣿⣿⣷⠀⢻⣧⠈⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⣿⣿⣿⡇⠀⢹⣿⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⠀⢸⣿⠀⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣷⠀⠀⠁⠀⠈⢷⣤⣼⣿⣿⣿⠿⠗⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠧⢤⣾⣿⣿⣿⣿⠟⠀⠘⠉⠀⣿⣿⣿⣿⣿⣿⣿⡟⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⣿⣿⠆⠀⠀⠀⠀⠀⠈⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢹⣿⣿⣿⣿⣿⣿⣿⣿⣿⡆
+⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣄⣀⣀⠀⣁⢐⣀⣠⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣸⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⠀
+⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⣦⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⠿⠟⠉⠋⠉⠋⠙⠛⢿⡇⠀⠀⠀⠀⠀⠀⠀⣀⢀⣠⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⠁⠀⠀
+⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣦⣤⣀⣀⠀⠀⠀⠀⠀⠙⣦⣀⡆⠈⡄⠀⣘⣠⡞⠁⠀⠀⢀⡀⣄⣶⣶⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣶⣀⣰⣀⢈⠙⠛⠛⠛⠛⠋⠉⣀⣶⣰⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⣸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⢛⣧⠉⠉⠙⠒⠛⠛⠛⠚⠛⠉⠉⢰⡿⠿⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⢿⣿⣿⡿⠟⠋⠁⠰⣯⠟⠀⠀⠀⠀⠄⠀⠀⠀⠀⠀⠄⢺⣡⡆⠀⠈⠻⢿⡛⢹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠟⠊⠉⠀⠀⠀⠀⠀⢹⡀⠀⠈⠑⠲⢤⣄⣂⣈⣐⣀⣀⣠⣟⣀⠤⠔⠒⠀⠀⠉⠛⢿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣯⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢷⡒⣒⠲⣒⢒⢲⣶⡒⠖⡲⢶⡞⠁⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⣷⢠⣣⠔⡊⠖⢫⠘⡴⣱⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⡟⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⣨⣿⣇⢻⣿⣿⣿⣿⡢⣀⠀⠀⠀⠀⠀⣀⣀⣠⡀⠀⠈⣧⠳⡘⠴⡉⢆⠽⣿⠋⠀⠀⠀⠀⣀⡀⠀⠀⠀⠀⣼⣿⣿⣿⣿⢛⣿⠿⡄⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⢄⡾⣣⢁⡛⢣⢉⡻⡿⢿⣷⢦⣉⠓⢒⣊⣭⡭⢀⡏⠀⠀⠀⠈⢳⣱⡢⠑⡌⡿⠁⠀⠀⠀⠀⢀⡇⠨⣭⣖⠢⣼⣿⣿⠿⠋⣄⣾⠏⡒⣽⣦⠀⠀⠀⠀
+⠀⠀⠀⠀⣠⡟⢚⢄⡒⢌⢂⠣⡑⠤⡃⢍⠣⡌⢍⣃⢲⣏⡀⠸⠤⣀⣀⠀⠀⠀⠹⣦⠣⣼⠃⠀⢀⣀⡤⠤⠚⢁⣀⣷⠄⢿⡟⢫⢁⠎⡱⢌⠡⢃⠜⣘⡹⣇⠀⠀⠀
+⠀⠀⠀⣰⠏⣷⡃⢆⡘⠤⢃⣌⡇⠖⡩⢌⠢⣑⠊⡔⢢⢒⠩⣉⠓⡒⠦⠭⠭⢥⣒⣚⣻⣗⣈⠭⠥⢖⢒⡚⠩⡍⡒⢤⡉⠆⡍⢒⠌⡒⣡⢊⡴⢃⠜⣠⢑⡼⠀⠀⠀
+⠀⠀⣰⢫⢰⣉⣿⡌⣴⣁⢣⣼⡏⡜⢰⣈⢱⢠⢩⣐⢡⢊⢱⢠⡍⣰⢉⡜⣤⢓⢸⣏⣀⣀⣿⡘⢢⢡⡒⣌⡑⣆⡑⢢⣌⢱⣈⣬⡘⣤⡁⣎⡟⡌⢢⢡⣾⢃⠀⠀⠀
+⠀⢰⡟⡏⠷⡙⢎⣿⡶⡉⢇⣿⡷⢙⠳⡉⠇⡎⢳⠉⢇⢋⠞⢳⢁⠳⠞⡁⢇⠞⡸⢹⡟⣿⡏⢇⡎⠷⡙⢎⡹⢈⡹⢃⠞⡰⣉⠆⢳⠆⢳⡘⣿⡁⡏⣾⠇⢏⠀⠀⠀
+⢀⡾⣥⢋⠴⡁⠆⣿⣷⣱⣿⣻⡇⢎⠰⡁⢎⠰⡁⢎⠢⢌⡘⠄⡎⠱⡨⢑⠌⡢⠅⣿⡇⣻⣏⠦⡘⠰⡉⠆⡔⢣⢐⡡⢊⠔⡰⢨⡁⢎⡡⢘⣿⣷⣼⡟⣌⠢⠀⠀⠀
+⢸⢇⠹⢌⠢⢅⠓⢾⣟⡿⣷⣿⠇⡊⢔⠡⡊⢔⠡⡊⠔⢢⠘⡰⢈⡱⢐⡉⢆⠡⢍⣿⢦⢙⣿⢂⡍⠱⡘⠌⡔⢡⢂⠒⡡⢊⠔⡡⡘⢄⡒⡡⣿⣿⣿⠒⡄⢣⠀⠀⠀
+⣿⢂⠣⢌⠣⡘⢌⠺⣿⣽⢻⣿⢀⠓⡌⢒⠡⢊⠒⡡⡉⢆⡑⢢⢁⠦⢡⠘⠤⣉⢺⣟⢸⡌⣿⡆⡌⢱⠈⡜⢠⠃⡌⢒⠡⢊⠔⡡⡘⢄⠆⡱⣿⢯⡽⢃⠜⡠⠀⠀⠀
+⢠⡇⢎⢂⠧⢌⠱⡈⠜⣿⣞⣯⡗⢨⡘⠤⢃⠥⢃⡱⠤⡑⢢⠘⡄⡊⠔⡡⢊⠔⡤⢻⡏⡤⡇⢿⡧⡘⢄⠣⡘⢄⠣⡘⠤⡉⢆⠚⠤⡑⢊⡔⢡⣿⣻⡏⠴⡘⠰⠀⠀⠀
+⣼⠓⡌⡒⢌⣂⠣⡉⢆⡹⢯⣷⡏⠔⡨⢒⡉⠆⠥⢂⡱⢈⠆⡱⠠⢅⠓⡄⢣⠘⠤⣿⡇⢇⡹⢸⣷⢁⠎⡰⢁⠎⡰⢁⡒⢡⠊⡜⢠⠃⡥⠘⠤⣿⣳⡟⠤⡑⢃⠀⠀⠀
 """
 
 import os
@@ -328,6 +362,14 @@ class Vector:
         self.mirror(normal, point)
         self.coord += translation_vector
 
+    def distance(self, v2):
+        delta = self.coord - v2.coord
+        return np.linalg.norm(delta)
+
+    def distance_rough(self, v2):
+        delta = self.coord - v2.coord
+        return max(float(abs(delta[0])), float(abs(delta[1])), float(abs(delta[2])))
+
 
 class Atom(Vector):
 
@@ -344,24 +386,15 @@ class Atom(Vector):
         if symbol != "":
             self.assign_weight()
 
-
-def atoms_distance(a: Atom, b: Atom, simplified=False):
-    diff_vector = a.coord - b.coord
-    if simplified:
-        # Sometimes, when performing especially heavy calculations, it might be useful to take crude simplified approach
-        return abs(diff_vector[1, 1]) + abs(diff_vector[2, 1]) + abs(diff_vector[3, 1])
-    else:
-        # But usually numpy is fast enough, so it's False by default
-        return np.linalg.norm(diff_vector)
-
-
-def atoms_connected(a: Atom, b: Atom, simplified=False, cutoff=0.025):
-    distance = atoms_distance(a, b, simplified)
-    covalent_sum = covalent_radius[a.symbol] + covalent_radius[b.symbol]
-    if abs(covalent_sum - distance) <= cutoff:
-        return True
-    else:
-        return False
+    def connected(self, b, simplified=False, cutoff=0.025):
+        if simplified:
+            d = Vector.distance_rough(self, b)
+        else:
+            d = Vector.distance(self, b)
+        if d <= cutoff:
+            return True
+        else:
+            return False
 
 
 class Molecule:
