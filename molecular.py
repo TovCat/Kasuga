@@ -398,49 +398,49 @@ class Atom(Vector):
 
 
 class Molecule:
-    atoms = [Atom]
-    molecular_formula = ""
-    mass_center = np.zeros((3, 1))
     connectivity_matrix = np.zeros((1, 1))
     inertia_tensor = np.zeros((3, 3))
     inertia_eigenvalues = np.zeros((3, 1))
     inertia_eigenvectors = np.zeros((3, 3))
     inertia_x, inertia_y, inertia_z = np.zeros((3, 1))
 
+    def __init__(self):
+        self.atoms = []
+        self.mass_center = Vector()
+        self.molecular_formula = ""
+
     def __add__(self, other):
         for i in other.atoms:
             self.atoms.append(i)
 
-    @classmethod
-    def get_mass_center(cls):
-        if cls.mass_center == np.zeros((3, 1)):
+    def get_mass_center(self):
+        if self.mass_center == np.zeros((3, 1)):
             mass = 0.0
             mass_vector = np.zeros((3, 1))
-            for atom in cls.atoms:
+            for atom in self.atoms:
                 mass += element_weight[atom.symbol]
                 mass_vector += atom.coord * element_weight[atom.symbol]
-            cls.mass_center = mass_vector / mass
-        return cls.mass_center
+            self.mass_center = mass_vector / mass
+        return self.mass_center
 
-    @classmethod
-    def get_molecular_formula(cls):
-        if cls.molecular_formula == "":
-            atom_list = [str]
-            count_list = [int]
-            for i in range(len(cls.atoms)):
-                if cls.atoms[i].symbol not in atom_list:
-                    atom_list.append(cls.atoms[i].symbol)
-                    count_list.append(0)
+    def get_molecular_formula(self):
+        if self.molecular_formula == "":
+            atom_list = []
+            count_list = []
+            for i, atom in enumerate(self.atoms):
+                if atom.symbol not in atom_list:
+                    atom_list.append(atom.symbol)
             atom_list.sort()
-            for i1 in range(len(cls.atoms)):
-                for i2 in range(len(atom_list)):
-                    if cls.atoms[i1].symbol == atom_list[i2]:
-                        count_list += 1
+            for i1, atom_in_formula in enumerate(atom_list):
+                count_list.append(0)
+                for i2, atom_in_list in enumerate(self.atoms):
+                    if atom_in_formula == atom_in_list:
+                        count_list[i1] += 1
             result = ""
-            for i in range(len(atom_list)):
-                result += (atom_list[i] + str(count_list[i]))
-            cls.molecular_formula = result
-        return cls.molecular_formula
+            for i, atom in enumerate(atom_list):
+                result += (atom + str(count_list[i]))
+            self.molecular_formula = result
+        return self.molecular_formula
 
     @classmethod
     def get_connectivity_matrix(cls):
