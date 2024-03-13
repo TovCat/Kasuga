@@ -299,12 +299,13 @@ class Vector:
         c = normal[2]
         d = -1 * (a * point[0] + b * point[1] + c * point[2])
         # distance between a point (our vector) and a mirror plane
-        distance = abs(a * self.coord[0] + b * self.coord[1] + c * self.coord[3] + d) / np.sqrt(a**2 + b**2 + c**2)
+        distance = abs(a * self.coord[0] + b * self.coord[1] + c * self.coord[3] + d) / np.sqrt(
+            a ** 2 + b ** 2 + c ** 2)
         # provided normal vector can either face the same direction as mirrored point or the opposite
         test1 = self.coord + 2 * n * distance
         test2 = self.coord - 2 * n * distance
-        distance_test1 = abs(a * test1[0] + b * test1[1] + c * test1[3] + d) / np.sqrt(a**2 + b**2 + c**2)
-        distance_test2 = abs(a * test2[0] + b * test2[1] + c * test2[3] + d) / np.sqrt(a**2 + b**2 + c**2)
+        distance_test1 = abs(a * test1[0] + b * test1[1] + c * test1[3] + d) / np.sqrt(a ** 2 + b ** 2 + c ** 2)
+        distance_test2 = abs(a * test2[0] + b * test2[1] + c * test2[3] + d) / np.sqrt(a ** 2 + b ** 2 + c ** 2)
         if distance_test1 < distance_test2:
             # same direction
             self.coord = test1
@@ -398,64 +399,63 @@ class Atom(Vector):
 
 
 class Molecule:
-    connectivity_matrix = np.zeros((1, 1))
-    inertia_tensor = np.zeros((3, 3))
-    inertia_eigenvalues = np.zeros((3, 1))
-    inertia_eigenvectors = np.zeros((3, 3))
-    inertia_x, inertia_y, inertia_z = np.zeros((3, 1))
 
     def __init__(self):
         self.atoms = []
-        self.mass_center = Vector()
-        self.molecular_formula = ""
+        self.mass_center = None
+        self.molecular_formula = None
+        self.connectivity_matrix = None
+        self.inertia_eigenvectors = None
+        self.inertia_eigenvalues = None
 
     def __add__(self, other):
         for i in other.atoms:
             self.atoms.append(i)
 
     def get_mass_center(self):
-        if self.mass_center == np.zeros((3, 1)):
-            mass = 0.0
-            mass_vector = np.zeros((3, 1))
-            for atom in self.atoms:
-                mass += element_weight[atom.symbol]
-                mass_vector += atom.coord * element_weight[atom.symbol]
-            self.mass_center = mass_vector / mass
+        if self.mass_center is None:
+            self.mass_center = Vector()
+        mass = 0.0
+        mass_vector = np.zeros((3, 1))
+        for atom in self.atoms:
+            mass += element_weight[atom.symbol]
+            mass_vector += atom.coord * element_weight[atom.symbol]
+        self.mass_center = mass_vector / mass
         return self.mass_center
 
     def get_molecular_formula(self):
-        if self.molecular_formula == "":
-            atom_list = []
-            count_list = []
-            for i, atom in enumerate(self.atoms):
-                if atom.symbol not in atom_list:
-                    atom_list.append(atom.symbol)
-            atom_list.sort()
-            for i1, atom_in_formula in enumerate(atom_list):
-                count_list.append(0)
-                for i2, atom_in_list in enumerate(self.atoms):
-                    if atom_in_formula == atom_in_list:
-                        count_list[i1] += 1
-            result = ""
-            for i, atom in enumerate(atom_list):
-                result += (atom + str(count_list[i]))
-            self.molecular_formula = result
+        if self.molecular_formula is None:
+            self.molecular_formula = ""
+        atom_list = []
+        count_list = []
+        for i, atom in enumerate(self.atoms):
+            if atom.symbol not in atom_list:
+                atom_list.append(atom.symbol)
+        atom_list.sort()
+        for i1, atom_in_formula in enumerate(atom_list):
+            count_list.append(0)
+            for i2, atom_in_list in enumerate(self.atoms):
+                if atom_in_formula == atom_in_list:
+                    count_list[i1] += 1
+        result = ""
+        for i, atom in enumerate(atom_list):
+            result += (atom + str(count_list[i]))
+        self.molecular_formula = result
         return self.molecular_formula
 
-    @classmethod
-    def get_connectivity_matrix(cls):
-        if cls.connectivity_matrix == np.zeros((1, 1)):
-            cls.connectivity_matrix = np.zeros((len(cls.atoms), len(cls.atoms)))
-            for i1 in range(len(cls.atoms)):
-                for i2 in range(i1, len(cls.atoms)):
-                    if atoms_connected(cls.atoms[i1], cls.atoms[i2]):
-                        cls.connectivity_matrix[i1, i2] = 1
-                        cls.connectivity_matrix[i2, i1] = 1
-        return cls.connectivity_matrix
+    def get_connectivity_matrix(self):
+        if self.connectivity_matrix is None:
+            self.connectivity_matrix = np.zeros((len(self.atoms), len(self.atoms)))
+        for i1 in range(len(self.atoms)):
+            for i2 in range(i1, len(self.atoms)):
+                if self.atoms[i1].connected(self.atoms[i2]):
+                    self.connectivity_matrix[i1, i2] = 1
+                    self.connectivity_matrix[i2, i1] = 1
+        return self.connectivity_matrix
 
-    @classmethod
-    def get_inertia_tensor(cls):
-        if cls.inertia_z != np.zeros((3, 1)) and cls.inertia_y != np.zeros((3, 1)) and cls.inertia_x != np.zeros((3, 1)):
+    def get_inertia_vectors(self):
+        if cls.inertia_z != np.zeros((3, 1)) and cls.inertia_y != np.zeros((3, 1)) and cls.inertia_x != np.zeros(
+                (3, 1)):
             # First, we translate origin to mass center
             mass_center = cls.get_mass_center()
             atoms_mc_system = [Atom]
@@ -466,12 +466,12 @@ class Molecule:
                 atoms_mc_system.append(new_a)
             # Calculate inertia tensor
             for a in atoms_mc_system:
-                cls.inertia_tensor[0, 0] += element_weight[a.symbol] * (a.coord[1, 0]**2 + a.coord[2, 0]**2)  # xx
+                cls.inertia_tensor[0, 0] += element_weight[a.symbol] * (a.coord[1, 0] ** 2 + a.coord[2, 0] ** 2)  # xx
                 cls.inertia_tensor[0, 1] += -1 * element_weight[a.symbol] * a.coord[0, 0] * a.coord[1, 0]  # xy
                 cls.inertia_tensor[0, 2] += -1 * element_weight[a.symbol] * a.coord[0, 0] * a.coord[2, 0]  # xz
-                cls.inertia_tensor[1, 1] += element_weight[a.symbol] * (a.coord[0, 0]**2 + a.coord[2, 0]**2)  # yy
+                cls.inertia_tensor[1, 1] += element_weight[a.symbol] * (a.coord[0, 0] ** 2 + a.coord[2, 0] ** 2)  # yy
                 cls.inertia_tensor[1, 2] += -1 * element_weight[a.symbol] * a.coord[1, 0] * a.coord[2, 0]  # yz
-                cls.inertia_tensor[2, 2] += element_weight[a.symbol] * (a.coord[0, 0]**2 + a.coord[1, 0]**2)  # zz
+                cls.inertia_tensor[2, 2] += element_weight[a.symbol] * (a.coord[0, 0] ** 2 + a.coord[1, 0] ** 2)  # zz
             cls.inertia_tensor[1, 0] = cls.inertia_tensor[0, 1]
             cls.inertia_tensor[2, 0] = cls.inertia_tensor[0, 2]
             cls.inertia_tensor[2, 1] = cls.inertia_tensor[1, 2]
@@ -482,8 +482,8 @@ class Molecule:
             for i in range(3):
                 index = np.where(internal_e == internal_e.max())
                 if cls.inertia_z != np.zeros((3, 1)):
-                    cls.inertia_z = (cls.inertia_eigenvalues[index[0]-1:index[0], :] /
-                                     np.linalg.norm(cls.inertia_eigenvalues[index[0]-1:index[0], :]))
+                    cls.inertia_z = (cls.inertia_eigenvalues[index[0] - 1:index[0], :] /
+                                     np.linalg.norm(cls.inertia_eigenvalues[index[0] - 1:index[0], :]))
                 elif cls.inertia_y != np.zeros((3, 1)):
                     cls.inertia_y = (cls.inertia_eigenvalues[index[0] - 1:index[0], :] /
                                      np.linalg.norm(cls.inertia_eigenvalues[index[0] - 1:index[0], :]))
@@ -542,7 +542,7 @@ def molecules_match_rotation(rotated: Molecule, static: Molecule):
     static_y = np.transpose(static_y)
     static_z = np.transpose(static_z)
     # Create matrices that rotate standard coordinate system 0 to molecule's principal axes
-    rot_mat_rotated = np.array([[rotated_x],[rotated_y],[rotated_z]])
+    rot_mat_rotated = np.array([[rotated_x], [rotated_y], [rotated_z]])
     rot_mat_static = np.array([[static_x], [static_y], [static_z]])
     # Combine two rotations: Rotated -> 0  (inverted 0 -> Rotated) and 0 -> Static
     final_rotation = np.matmul(np.linalg.inv(rot_mat_rotated), rot_mat_static)
@@ -795,5 +795,3 @@ class CifFile:
 class Cluster:
     molecules = [Molecule]
     cif = CifFile
-
-
