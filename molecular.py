@@ -316,7 +316,7 @@ class Vector:
     def xyz_mirror(self, plane="xy", plane_point=np.zeros(3)):
         """
         Simplified mirror method to reflect vector in xy, xz and yz planes
-        :param plane: string representing one of default planes: "xy", "xz", "yz" or "ab", "ac", "bc" for fractional coordinates.
+        :param plane: string representing one of default planes: "xy", "xz", "yz" or "ab", "ac", "bc"
         :param plane_point: arbitrary point that belongs to a mirror plane (np.array, [0,0,0] by default)
         :return:
         """
@@ -407,10 +407,32 @@ class Molecule:
         self.connectivity_matrix = None
         self.inertia_eigenvectors = None
         self.inertia_eigenvalues = None
+        self.inertia_vector_x, self.inertia_vector_y, self.inertia_vector_z = None, None, None
 
     def __add__(self, other):
         for i in other.atoms:
             self.atoms.append(i)
+
+    def __eq__(self, other):
+        diff = 0.0
+        # Simple tests first to potentially save the hassle
+        if self.get_molecular_formula() != self.get_molecular_formula():
+            return False
+        # For symmetry cloned molecules it's safe to assume that the order of atoms is still the same
+        # But generally it's not always the case, especially if molecules originate from different sources
+        for i1 in range(len(self.atoms)):
+            current_min = 1000
+            for i2 in range(len(other.atoms)):
+                # We look for the closest atom with the same symbol
+                if self.atoms[i1].symbol == other.atoms[i2].symbol:
+                    current_diff = self.atoms[i1].distance(other.atoms[i2])
+                    if current_diff < current_min:
+                        current_min = current_diff
+            diff += current_min
+        if diff < 0.05:
+            return True
+        else:
+            return False
 
     def get_mass_center(self):
         if self.mass_center is None:
@@ -454,82 +476,69 @@ class Molecule:
         return self.connectivity_matrix
 
     def get_inertia_vectors(self):
-        if cls.inertia_z != np.zeros((3, 1)) and cls.inertia_y != np.zeros((3, 1)) and cls.inertia_x != np.zeros(
-                (3, 1)):
-            # First, we translate origin to mass center
-            mass_center = cls.get_mass_center()
-            atoms_mc_system = [Atom]
-            for a in cls.atoms:
-                new_a = Atom
-                new_a.coord = a.coord - mass_center
-                new_a.symbol = a.symbol
-                atoms_mc_system.append(new_a)
-            # Calculate inertia tensor
-            for a in atoms_mc_system:
-                cls.inertia_tensor[0, 0] += element_weight[a.symbol] * (a.coord[1, 0] ** 2 + a.coord[2, 0] ** 2)  # xx
-                cls.inertia_tensor[0, 1] += -1 * element_weight[a.symbol] * a.coord[0, 0] * a.coord[1, 0]  # xy
-                cls.inertia_tensor[0, 2] += -1 * element_weight[a.symbol] * a.coord[0, 0] * a.coord[2, 0]  # xz
-                cls.inertia_tensor[1, 1] += element_weight[a.symbol] * (a.coord[0, 0] ** 2 + a.coord[2, 0] ** 2)  # yy
-                cls.inertia_tensor[1, 2] += -1 * element_weight[a.symbol] * a.coord[1, 0] * a.coord[2, 0]  # yz
-                cls.inertia_tensor[2, 2] += element_weight[a.symbol] * (a.coord[0, 0] ** 2 + a.coord[1, 0] ** 2)  # zz
-            cls.inertia_tensor[1, 0] = cls.inertia_tensor[0, 1]
-            cls.inertia_tensor[2, 0] = cls.inertia_tensor[0, 2]
-            cls.inertia_tensor[2, 1] = cls.inertia_tensor[1, 2]
-            # Calculate eigenvalues and eigenvectors of the inertia tensor
-            cls.inertia_eigenvalues, cls.inertia_eigenvectors = np.linalg.eig(cls.inertia_tensor)
-            # Assign eigenvectors to Cartesian axis: highest for Z, lowest for X
-            internal_e = cls.inertia_eigenvalues
-            for i in range(3):
-                index = np.where(internal_e == internal_e.max())
-                if cls.inertia_z != np.zeros((3, 1)):
-                    cls.inertia_z = (cls.inertia_eigenvalues[index[0] - 1:index[0], :] /
-                                     np.linalg.norm(cls.inertia_eigenvalues[index[0] - 1:index[0], :]))
-                elif cls.inertia_y != np.zeros((3, 1)):
-                    cls.inertia_y = (cls.inertia_eigenvalues[index[0] - 1:index[0], :] /
-                                     np.linalg.norm(cls.inertia_eigenvalues[index[0] - 1:index[0], :]))
-                elif cls.inertia_x != np.zeros((3, 1)):
-                    cls.inertia_x = (cls.inertia_eigenvalues[index[0] - 1:index[0], :] /
-                                     np.linalg.norm(cls.inertia_eigenvalues[index[0] - 1:index[0], :]))
-                internal_e[index[0], 0] = -1.0
-        return cls.inertia_z, cls.inertia_y, cls.inertia_x
+        if self.inertia_eigenvalues is None or self.inertia_eigenvectors is None:
+            self.inertia_eigenvectors = np.zeros((3, 3))
+            self.inertia_eigenvalues = np.zeros(3)
+        # First, we translate origin to mass center
+        if self.mass_center is None:
+            mass_center = self.get_mass_center()
+        else:
+            mass_center = self.mass_center
+        atoms_mc_system = []
+        for a in self.atoms:
+            new_a = Atom()
+            new_a.coord = a.coord - mass_center
+            new_a.symbol = a.symbol
+            atoms_mc_system.append(new_a)
+        # Calculate inertia tensor
+        for a in atoms_mc_system:
+            # xx
+            self.inertia_eigenvectors[0, 0] += element_weight[a.symbol] * (a.coord[1, 0] ** 2 + a.coord[2, 0] ** 2)
+            # xy
+            self.inertia_eigenvectors[0, 1] += -1 * element_weight[a.symbol] * a.coord[0, 0] * a.coord[1, 0]
+            # xz
+            self.inertia_eigenvectors[0, 2] += -1 * element_weight[a.symbol] * a.coord[0, 0] * a.coord[2, 0]
+            # yy
+            self.inertia_eigenvectors[1, 1] += element_weight[a.symbol] * (a.coord[0, 0] ** 2 + a.coord[2, 0] ** 2)
+            # yz
+            self.inertia_eigenvectors[1, 2] += -1 * element_weight[a.symbol] * a.coord[1, 0] * a.coord[2, 0]
+            # zz
+            self.inertia_eigenvectors[2, 2] += element_weight[a.symbol] * (a.coord[0, 0] ** 2 + a.coord[1, 0] ** 2)
+        self.inertia_eigenvectors[1, 0] = self.inertia_eigenvectors[0, 1]
+        self.inertia_eigenvectors[2, 0] = self.inertia_eigenvectors[0, 2]
+        self.inertia_eigenvectors[2, 1] = self.inertia_eigenvectors[1, 2]
+        # Calculate eigenvalues and eigenvectors of the inertia tensor
+        self.inertia_eigenvalues, self.inertia_eigenvectors = np.linalg.eig(self.inertia_eigenvectors)
+        # Assign eigenvectors to Cartesian axis: highest for Z, lowest for X
+        internal_e = self.inertia_eigenvalues
+        if self.inertia_vector_x is None or self.inertia_vector_y is None or self.inertia_vector_z is None:
+            self.inertia_vector_x = Vector()
+            self.inertia_vector_y = Vector()
+            self.inertia_vector_z = Vector()
+        for i in range(3):
+            index = np.where(internal_e == internal_e.max())
+            if self.inertia_vector_z.coord != np.zeros(3):
+                self.inertia_vector_z = (self.inertia_eigenvalues[index[0] - 1:index[0], :] /
+                                         np.linalg.norm(self.inertia_eigenvalues[index[0] - 1:index[0], :]))
+            elif self.inertia_vector_y.coord != np.zeros(3):
+                self.inertia_vector_y.coord = (self.inertia_eigenvalues[index[0] - 1:index[0], :] /
+                                               np.linalg.norm(self.inertia_eigenvalues[index[0] - 1:index[0], :]))
+            elif self.inertia_vector_x.coord != np.zeros(3):
+                self.inertia_vector_x.coord = (self.inertia_eigenvalues[index[0] - 1:index[0], :] /
+                                               np.linalg.norm(self.inertia_eigenvalues[index[0] - 1:index[0], :]))
+            internal_e[index[0], 0] = -1.0
+        return self.inertia_vector_x, self.inertia_vector_y, self.inertia_vector_z
 
 
-def molecules_equal(a: Molecule, b: Molecule, same_order=True, simplified=False):
-    diff = 0.0
-    # Simple tests first to potentially save the hassle
-    if len(a.atoms) != len(b.atoms):
-        return False
-    if a.get_molecular_formula() != b.get_molecular_formula():
-        return False
-    if not same_order:
-        # For symmetry cloned molecules it's safe to assume that the order of atoms is still the same
-        # But generally it's not always the case, especially if molecules originate from different sources
-        for i1 in range(len(a.atoms)):
-            current_min = 1000
-            for i2 in range(len(b.atoms)):
-                # We look for the closest atom with the same symbol
-                current_diff = atoms_distance(a.atoms[i1], b.atoms[i2], simplified)
-                if current_diff < current_min:
-                    current_min = current_diff
-            diff += current_min
-    else:
-        for i1 in range(len(a.atoms)):
-            diff = atoms_distance(a.atoms[i1], b.atoms[i1], simplified)
-    if diff < 0.05:
-        return True
-    else:
-        return False
-
-
-def molecules_connected(a: Molecule, b: Molecule, simplified=False):
+def molecules_connected(a: Molecule, b: Molecule):
     for i1 in a.atoms:
         for i2 in b.atoms:
-            if atoms_connected(i1, i2, simplified):
+            if i1.connected(i2):
                 return True
     return False
 
 
-def molecules_match_rotation(rotated: Molecule, static: Molecule):
+def molecules_match_rotation(rotated: Molecule(), static: Molecule()):
     # Extract principal axes for each molecule
     # Static stays in place, rotated is transformed
     rotated_x, rotated_y, rotated_z = rotated.get_inertia_tensor()
