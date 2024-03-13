@@ -372,6 +372,19 @@ class Vector:
         return max(float(abs(delta[0])), float(abs(delta[1])), float(abs(delta[2])))
 
 
+# class ConnectivityGraph:
+#
+#     def __init__(self, size):
+#         self.size = size
+#         self.nodes = np.zeros((size, size))
+#
+#     def flood_fill_search(self, startpoint: int, inside=None, checked=None):
+#         if inside is None or :
+#             inside = np.zeros(self.size)
+
+
+
+
 class Atom(Vector):
 
     def assign_weight(self):
