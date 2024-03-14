@@ -372,17 +372,31 @@ class Vector:
         return max(float(abs(delta[0])), float(abs(delta[1])), float(abs(delta[2])))
 
 
-# class ConnectivityGraph:
-#
-#     def __init__(self, size):
-#         self.size = size
-#         self.nodes = np.zeros((size, size))
-#
-#     def flood_fill_search(self, startpoint: int, inside=None, checked=None):
-#         if inside is None or :
-#             inside = np.zeros(self.size)
+class ConnectivityGraph:
 
+    def __init__(self, size):
+        self.size = size
+        self.nodes = np.zeros((size, size))
 
+    def flood_fill_search(self, startpoint: int):
+        inside = np.zeros(self.size)
+        checked = np.zeros(self.size)
+        while True:
+            for i in range(self.size):
+                if self.nodes[startpoint, i] == 1:
+                    inside[i] = 1
+            checked[startpoint] = 1
+            count_inside = 0
+            count_checked = 0
+            for i in range(self.size):
+                if checked[i] == 1:
+                    count_checked += 1
+                if inside[i] == 1:
+                    count_inside += 1
+                if checked[i] != 0 and inside[i] == 1:
+                    startpoint = i
+            if count_inside == count_checked:
+                return inside
 
 
 class Atom(Vector):
