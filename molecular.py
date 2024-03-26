@@ -564,7 +564,7 @@ class Molecule:
             internal_e[index[0], 0] = -1.0
         return self.inertia_vector_x, self.inertia_vector_y, self.inertia_vector_z
 
-    def change_bond(self, bond: tuple, delta: int):
+    def change_bond(self, bond: tuple, delta: float):
         first_fragment = self.connectivity_graph.flood_fill_search(bond[0], (bond[1]))
         second_fragment = self.connectivity_graph.flood_fill_search(bond[1], (bond[0]))
         translation_vector = self.atoms[bond[0]].coord - self.atoms[bond[1]].coord
@@ -577,7 +577,22 @@ class Molecule:
                 self.atoms[i].coord += delta * translation_vector / 2
             for i in second_fragment:
                 self.atoms[i].coord -= delta * translation_vector / 2
-            
+
+    def change_angle(self, angle: tuple, delta: float):
+        first_fragment = self.connectivity_graph.flood_fill_search(angle[0], (angle[1]))
+        second_fragment = self.connectivity_graph.flood_fill_search(angle[2], (angle[1]))
+        v1 = self.atoms[angle[0]].coord - self.atoms[angle[1]].coord
+        v2 = self.atoms[angle[2]].coord - self.atoms[angle[1]].coord
+        rotation_vector = np.cross(v1, v2)
+        if self.connectivity_graph.subsets_connected(first_fragment, second_fragment):
+            self.atoms[angle[0]].rotate(delta / 2, rotation_vector, self.atoms[angle[1]])
+            self.atoms[angle[0]].rotate(-1 * delta / 2, rotation_vector, self.atoms[angle[1]])
+        else:
+            for i in first_fragment:
+                self.atoms[i].rotate(delta / 2, rotation_vector, self.atoms[angle[1]])
+            for i in second_fragment:
+                self.atoms[i].rotate(-1 * delta / 2, rotation_vector, self.atoms[angle[1]])
+
 
 def molecules_connected(a: Molecule, b: Molecule):
     for i1 in a.atoms:
