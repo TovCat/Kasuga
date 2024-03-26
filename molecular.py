@@ -399,6 +399,13 @@ class ConnectivityGraph:
             if count_inside == count_checked:
                 return inside
 
+    def subsets_connected(self, subset_one=np.zeros((1)), subset_two=np.zeros((1))):
+        for i1 in range(subset_one.size):
+            for i2 in range(subset_two.size):
+                if self.nodes[i1, i2] == 1 or self.nodes[i2, i1] == 1:
+                    return True
+        return False
+
 
 class Atom(Vector):
 
@@ -495,7 +502,7 @@ class Molecule:
 
     def get_connectivity_matrix(self):
         if self.connectivity_graph is None:
-            self.connectivity_graph = ConnectivityGraph()
+            self.connectivity_graph = ConnectivityGraph(len(self.atoms))
         for i1 in range(len(self.atoms)):
             for i2 in range(i1, len(self.atoms)):
                 if self.atoms[i1].connected(self.atoms[i2]):
@@ -557,6 +564,20 @@ class Molecule:
             internal_e[index[0], 0] = -1.0
         return self.inertia_vector_x, self.inertia_vector_y, self.inertia_vector_z
 
+    def change_bond(self, bond: tuple, delta: int):
+        first_fragment = self.connectivity_graph.flood_fill_search(bond[0], (bond[1]))
+        second_fragment = self.connectivity_graph.flood_fill_search(bond[1], (bond[0]))
+        translation_vector = self.atoms[bond[0]].coord - self.atoms[bond[1]].coord
+        translation_vector = np.linalg.norm(translation_vector)
+        if self.connectivity_graph.subsets_connected(first_fragment, second_fragment):
+            self.atoms[bond[0]].coord += delta * translation_vector / 2
+            self.atoms[bond[1]].coord -= delta * translation_vector / 2
+        else:
+            for i in first_fragment:
+                self.atoms[i].coord += delta * translation_vector / 2
+            for i in second_fragment:
+                self.atoms[i].coord -= delta * translation_vector / 2
+            
 
 def molecules_connected(a: Molecule, b: Molecule):
     for i1 in a.atoms:
