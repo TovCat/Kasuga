@@ -378,14 +378,15 @@ class ConnectivityGraph:
         self.size = size
         self.nodes = np.zeros((size, size))
 
-    def flood_fill_search(self, startpoint: int):
-        inside = np.zeros(self.size)
-        checked = np.zeros(self.size)
+    def flood_fill_search(self, startpoint: int, excluded=()):
+        inside = np.zeros(self.size)  # points that are connected to the starting one
+        checked = np.zeros(self.size)  # points that we have already checked
         while True:
             for i in range(self.size):
-                if self.nodes[startpoint, i] == 1:
-                    inside[i] = 1
-            checked[startpoint] = 1
+                if self.nodes[startpoint, i] == 1 or self.nodes[i, startpoint] == 1:
+                    if i not in excluded:
+                        inside[i] = 1  # include all points that are connected to current start point
+            checked[startpoint] = 1  # so, we've checked current start point
             count_inside = 0
             count_checked = 0
             for i in range(self.size):
@@ -408,8 +409,8 @@ class Atom(Vector):
             kasuga_io.quit_with_error(f'Unrecognized {self.symbol} atom encountered!')
 
     def __init__(self, symbol=""):
-        self.weight = float  # Atomic weight
-        self.symbol = str  # Chemical symbol of an atom
+        self.weight = 0.0  # Atomic weight
+        self.symbol = ""  # Chemical symbol of an atom
         super().__init__()
         if symbol != "":
             self.assign_weight()
@@ -431,7 +432,7 @@ class Molecule:
         self.atoms = []
         self.mass_center = None
         self.molecular_formula = None
-        self.connectivity_matrix = None
+        self.connectivity_graph = None
         self.inertia_eigenvectors = None
         self.inertia_eigenvalues = None
         self.inertia_vector_x, self.inertia_vector_y, self.inertia_vector_z = None, None, None
@@ -493,14 +494,14 @@ class Molecule:
         return self.molecular_formula
 
     def get_connectivity_matrix(self):
-        if self.connectivity_matrix is None:
-            self.connectivity_matrix = np.zeros((len(self.atoms), len(self.atoms)))
+        if self.connectivity_graph is None:
+            self.connectivity_graph = ConnectivityGraph()
         for i1 in range(len(self.atoms)):
             for i2 in range(i1, len(self.atoms)):
                 if self.atoms[i1].connected(self.atoms[i2]):
-                    self.connectivity_matrix[i1, i2] = 1
-                    self.connectivity_matrix[i2, i1] = 1
-        return self.connectivity_matrix
+                    self.connectivity_graph.nodes[i1, i2] = 1
+                    self.connectivity_graph.nodes[i2, i1] = 1
+        return self.connectivity_graph.nodes
 
     def get_inertia_vectors(self):
         if self.inertia_eigenvalues is None or self.inertia_eigenvectors is None:
