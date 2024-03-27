@@ -511,6 +511,13 @@ class Molecule:
             else:
                 return True
 
+    def is_connected(self, other):
+        for i1 in self.atoms:
+            for i2 in other.atoms:
+                if i1.connected(i2):
+                    return True
+        return False
+
     def get_mass_center(self):
         if self.mass_center is None:
             self.mass_center = Vector()
@@ -606,6 +613,30 @@ class Molecule:
             internal_e[index[0], 0] = -1.0
         return self.inertia_vector_x, self.inertia_vector_y, self.inertia_vector_z
 
+    def match_rotation_to(self, other):
+        # Extract principal axes for each molecule
+        # Static stays in place, rotated is transformed
+        rotated_x, rotated_y, rotated_z = self.get_inertia_tensor()
+        static_x, static_y, static_z = other.get_inertia_tensor()
+        # Since the vectors are stored in ((3,1)) shape we need transpose them first
+        rotated_x = np.transpose(rotated_x)
+        rotated_y = np.transpose(rotated_y)
+        rotated_z = np.transpose(rotated_z)
+        static_x = np.transpose(static_x)
+        static_y = np.transpose(static_y)
+        static_z = np.transpose(static_z)
+        # Create matrices that rotate standard coordinate system 0 to molecule's principal axes
+        rot_mat_rotated = np.array([[rotated_x], [rotated_y], [rotated_z]])
+        rot_mat_static = np.array([[static_x], [static_y], [static_z]])
+        # Combine two rotations: Rotated -> 0  (inverted 0 -> Rotated) and 0 -> Static
+        final_rotation = np.matmul(np.linalg.inv(rot_mat_rotated), rot_mat_static)
+        # We translate Rotated to 0 system, perform rotation, and translate it back
+        mass_center = self.get_mass_center()
+        for i in range(len(self.atoms)):
+            self.atoms[i].coord -= mass_center
+            self.atoms[i].coord = np.transpose(np.matmul(np.transpose(self.atoms[i].coord), final_rotation))
+            self.atoms[i].coord += mass_center
+
     def change_bond(self, bond: tuple, delta: float):
         first_fragment = self.connectivity_graph.flood_fill_search(bond[0], (bond[1]))
         second_fragment = self.connectivity_graph.flood_fill_search(bond[1], (bond[0]))
@@ -647,39 +678,6 @@ class Molecule:
                 self.atoms[i].rotate(delta / 2, rotation_vector, self.atoms[dihedral[1]])
             for i in second_fragment:
                 self.atoms[i].rotate(-1 * delta / 2, rotation_vector, self.atoms[dihedral[1]])
-
-
-def molecules_connected(a: Molecule, b: Molecule):
-    for i1 in a.atoms:
-        for i2 in b.atoms:
-            if i1.connected(i2):
-                return True
-    return False
-
-
-def molecules_match_rotation(rotated: Molecule(), static: Molecule()):
-    # Extract principal axes for each molecule
-    # Static stays in place, rotated is transformed
-    rotated_x, rotated_y, rotated_z = rotated.get_inertia_tensor()
-    static_x, static_y, static_z = static.get_inertia_tensor()
-    # Since the vectors are stored in ((3,1)) shape we need transpose them first
-    rotated_x = np.transpose(rotated_x)
-    rotated_y = np.transpose(rotated_y)
-    rotated_z = np.transpose(rotated_z)
-    static_x = np.transpose(static_x)
-    static_y = np.transpose(static_y)
-    static_z = np.transpose(static_z)
-    # Create matrices that rotate standard coordinate system 0 to molecule's principal axes
-    rot_mat_rotated = np.array([[rotated_x], [rotated_y], [rotated_z]])
-    rot_mat_static = np.array([[static_x], [static_y], [static_z]])
-    # Combine two rotations: Rotated -> 0  (inverted 0 -> Rotated) and 0 -> Static
-    final_rotation = np.matmul(np.linalg.inv(rot_mat_rotated), rot_mat_static)
-    # We translate Rotated to 0 system, perform rotation, and translate it back
-    mass_center = rotated.get_mass_center()
-    for i in range(len(rotated.atoms)):
-        rotated.atoms[i].coord -= mass_center
-        rotated.atoms[i].coord = np.transpose(np.matmul(np.transpose(rotated.atoms[i].coord), final_rotation))
-        rotated.atoms[i].coord += mass_center
 
 
 class CifFile:
