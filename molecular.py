@@ -422,6 +422,20 @@ class Atom(Vector):
         if symbol != "":
             self.assign_weight()
 
+    def __eq__(self, other):
+        distance = np.linalg.norm(self.coord - other.coord)
+        if distance < 0.001 and self.symbol == other.symbol:
+            return True
+        else:
+            return False
+
+    def __ne__(self, other):
+        distance = np.linalg.norm(self.coord - other.coord)
+        if distance < 0.001 and self.symbol == other.symbol:
+            return False
+        else:
+            return True
+
     def connected(self, b, simplified=False, cutoff=0.025):
         if simplified:
             d = Vector.distance_rough(self, b)
@@ -448,6 +462,16 @@ class Molecule:
         for i in other.atoms:
             self.atoms.append(i)
 
+    def __sub__(self, other):
+        for_deletion = []
+        for i1 in other.atoms:
+            for num, i2 in enumerate(self.atoms):
+                if i1 == i2:
+                    for_deletion.append(self.atoms[num])
+        for i1 in for_deletion:
+            if i1 in self.atoms:
+                self.atoms.remove(i1)
+
     def __eq__(self, other):
         diff = 0.0
         # Simple tests first to potentially save the hassle
@@ -468,6 +492,24 @@ class Molecule:
             return True
         else:
             return False
+
+    def __ne__(self, other):
+        diff = 0.0
+        if self.get_molecular_formula() != self.get_molecular_formula():
+            return False
+        for i1 in range(len(self.atoms)):
+            current_min = 1000
+            for i2 in range(len(other.atoms)):
+                if self.atoms[i1].symbol == other.atoms[i2].symbol:
+                    current_diff = self.atoms[i1].distance(other.atoms[i2])
+                    if current_diff < current_min:
+                        current_min = current_diff
+            diff += current_min
+        if diff < 0.05:
+            if diff < 0.05:
+                return False
+            else:
+                return True
 
     def get_mass_center(self):
         if self.mass_center is None:
@@ -642,23 +684,25 @@ def molecules_match_rotation(rotated: Molecule(), static: Molecule()):
 
 class CifFile:
     # Parser and processor for .cif files according to CIF v1.1 standard
-    tags = {}  # Single fields from CIF
-    loops = []  # Looped fields from CIF
-    # Cell parameters
-    cell_length_a = float
-    cell_length_b = float
-    cell_length_c = float
-    cell_angle_alpha = float
-    cell_angle_beta = float
-    cell_angle_gamma = float
-    # Cartesian translation vectors
-    translation_a = np.zeros((3, 1))
-    translation_b = np.zeros((3, 1))
-    translation_c = np.zeros((3, 1))
-    # Transformation matrix from abc-system to Cartesian
-    transform_matrix = np.zeros((3, 3))
-    # Asymmetric unit of a primitive cell
-    as_unit = Molecule
+
+    def __init__(self):
+        tags = {}  # Single fields from CIF
+        loops = []  # Looped fields from CIF
+        # Cell parameters
+        cell_length_a = float
+        cell_length_b = float
+        cell_length_c = float
+        cell_angle_alpha = float
+        cell_angle_beta = float
+        cell_angle_gamma = float
+        # Cartesian translation vectors
+        translation_a = np.zeros((3, 1))
+        translation_b = np.zeros((3, 1))
+        translation_c = np.zeros((3, 1))
+        # Transformation matrix from abc-system to Cartesian
+        transform_matrix = np.zeros((3, 3))
+        # Asymmetric unit of a primitive cell
+        as_unit = Molecule
 
     @staticmethod
     def parse_line(line):
