@@ -680,6 +680,38 @@ class Molecule:
                 self.atoms[i].rotate(-1 * delta / 2, rotation_vector, self.atoms[dihedral[1]])
 
 
+class GaussianFile:
+
+    def __init__(self):
+        self.path = ""
+        self.version = ""
+        self.revision_date = ""
+        self.execution_date = ""
+
+    def __read_title(self, lines):
+        for n, line in enumerate(lines):
+            if line[1:4] == "***":
+                first = lines[n + 1].strip().split(" ")
+                second = lines[n + 1].strip().split(" ")
+                self.version = f'{first[0]} {first[1]}'
+                self.revision_date = first[2]
+                self.execution_date = second[0]
+                return n + 2
+
+    def read(self, file_path=""):
+        self.path = file_path
+        try:
+            if "\\" not in file_path:  # Try to open file in the same directory
+                file = open(os.path.join(os.getcwd(), file_path), "r")
+            else:
+                file = open(file_path, "r")
+            file_contents = file.readlines()
+            file.close()
+        except OSError:
+            kasuga_io.quit_with_error(f'Can`t open: {file_path}')
+        last_line = self.__read_title(file_contents)
+
+
 class CifFile:
     # Parser and processor for .cif files according to CIF v1.1 standard
 
