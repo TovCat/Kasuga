@@ -593,6 +593,19 @@ class Molecule:
             for i in second_fragment:
                 self.atoms[i].rotate(-1 * delta / 2, rotation_vector, self.atoms[angle[1]])
 
+    def change_dihedral(self, dihedral: tuple, delta: float):
+        first_fragment = self.connectivity_graph.flood_fill_search(dihedral[0], (dihedral[1], dihedral[2], dihedral[3]))
+        second_fragment = self.connectivity_graph.flood_fill_search(dihedral[3], (dihedral[0], dihedral[1], dihedral[2]))
+        rotation_vector = self.atoms[dihedral[1]].coord - self.atoms[dihedral[2]].coord
+        if self.connectivity_graph.subsets_connected(first_fragment, second_fragment):
+            self.atoms[dihedral[0]].rotate(delta / 2, rotation_vector, self.atoms[dihedral[1]])
+            self.atoms[dihedral[3]].rotate(-1 * delta / 2, rotation_vector, self.atoms[dihedral[1]])
+        else:
+            for i in first_fragment:
+                self.atoms[i].rotate(delta / 2, rotation_vector, self.atoms[dihedral[1]])
+            for i in second_fragment:
+                self.atoms[i].rotate(-1 * delta / 2, rotation_vector, self.atoms[dihedral[1]])
+
 
 def molecules_connected(a: Molecule, b: Molecule):
     for i1 in a.atoms:
