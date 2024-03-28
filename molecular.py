@@ -692,14 +692,16 @@ class GaussianFile:
         self.link0_instructions = {}
         self.calculation_instructions = []
         self.iops_instructions = []
+        self.calculation_title = ""
+        self.initial_geometry = Molecule()
 
     def link1(self):
 
         def get_title(lines):
             for n, line in enumerate(lines):
                 if line[1:4] == "***":
-                    first = lines[n + 1].strip().split(" ")
-                    second = lines[n + 1].strip().split(" ")
+                    first = lines[n + 1].strip().split()
+                    second = lines[n + 1].strip().split()
                     self.version = f'{first[0]} {first[1]}'
                     self.revision_date = first[2]
                     self.execution_date = second[0]
@@ -729,11 +731,30 @@ class GaussianFile:
         for i in range(last_line, len(extracted_lines)):
             self.iops_instructions.append(extracted_lines[i].strip())
 
+    def link101(self):
+        extracted_lines = self.file_raw_contents[self.__start_end[0]: self.__start_end[1]]
+        self.calculation_title = extracted_lines[1].strip()
+        for num, s in enumerate(extracted_lines):
+            if s[0] == " ":
+                return None
+            new_atom = Atom()
+            line = s.split()
+            new_atom.symbol = line[0]
+            new_atom.coord[0] = float(line[1])
+            new_atom.coord[1] = float(line[2])
+            new_atom.coord[2] = float(line[3])
+            self.initial_geometry.atoms.append(new_atom)
+
+    def link103(self):
+        extracted_lines = self.file_raw_contents[self.__start_end[0]: self.__start_end[1]]
+        if extracted_lines[3].strip() == "Initialization pass.":
+            return None
+
     links_dict = {
         "L1": link1(),
-        "L101": None,
+        "L101": link101(),
         "L102": None,
-        "L103": None,
+        "L103": link103(),
         "L105": None,
         "L106": None,
         "L107": None,
