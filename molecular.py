@@ -684,32 +684,146 @@ class GaussianFile:
 
     def __init__(self):
         self.path = ""
+        self.file_raw_contents = []
+        self.__start_end = None
         self.version = ""
         self.revision_date = ""
         self.execution_date = ""
+        self.link0_instructions = {}
+        self.calculation_instructions = []
+        self.iops_instructions = []
 
-    def __read_title(self, lines):
-        for n, line in enumerate(lines):
-            if line[1:4] == "***":
-                first = lines[n + 1].strip().split(" ")
-                second = lines[n + 1].strip().split(" ")
-                self.version = f'{first[0]} {first[1]}'
-                self.revision_date = first[2]
-                self.execution_date = second[0]
-                return n + 2
+    def link1(self):
+
+        def get_title(lines):
+            for n, line in enumerate(lines):
+                if line[1:4] == "***":
+                    first = lines[n + 1].strip().split(" ")
+                    second = lines[n + 1].strip().split(" ")
+                    self.version = f'{first[0]} {first[1]}'
+                    self.revision_date = first[2]
+                    self.execution_date = second[0]
+                    return n + 2
+
+        def get_link0(start_pos: int, lines):
+            for i in range(start_pos, len(lines)):
+                a = lines[i].strip()
+                if a[0] == "-":
+                    return i + 1
+                else:
+                    splitted = a.split("=")
+                    self.link0_instructions[splitted[0].strip()[1:]] = splitted[1].strip()
+
+        def get_calculation_instructions(start_pos: int, lines):
+            for i in range(start_pos, len(lines)):
+                a = lines[i].strip()
+                if a[0] == "-":
+                    return i + 1
+                else:
+                    self.calculation_instructions.append(a)
+
+        extracted_lines = self.file_raw_contents[self.__start_end[0]: self.__start_end[1]]
+        last_line = get_title(extracted_lines)
+        last_line = get_link0(last_line, extracted_lines)
+        last_line = get_calculation_instructions(last_line, extracted_lines)
+        for i in range(last_line, len(extracted_lines)):
+            self.iops_instructions.append(extracted_lines[i].strip())
+
+    links_dict = {
+        "L1": link1(),
+        "L101": None,
+        "L102": None,
+        "L103": None,
+        "L105": None,
+        "L106": None,
+        "L107": None,
+        "L108": None,
+        "L109": None,
+        "L110": None,
+        "L111": None,
+        "L112": None,
+        "L113": None,
+        "L114": None,
+        "L115": None,
+        "L116": None,
+        "L117": None,
+        "L118": None,
+        "L120": None,
+        "L121": None,
+        "L122": None,
+        "L123": None,
+        "L124": None,
+        "L202": None,
+        "L301": None,
+        "L302": None,
+        "L303": None,
+        "L308": None,
+        "L310": None,
+        "L311": None,
+        "L314": None,
+        "L316": None,
+        "L319": None,
+        "L401": None,
+        "L402": None,
+        "L405": None,
+        "L502": None,
+        "L503": None,
+        "L506": None,
+        "L508": None,
+        "L510": None,
+        "L601": None,
+        "L602": None,
+        "L604": None,
+        "L607": None,
+        "L608": None,
+        "L609": None,
+        "L610": None,
+        "L701": None,
+        "L702": None,
+        "L703": None,
+        "L716": None,
+        "L801": None,
+        "L802": None,
+        "L804": None,
+        "L811": None,
+        "L901": None,
+        "L902": None,
+        "L903": None,
+        "L904": None,
+        "L905": None,
+        "L906": None,
+        "L908": None,
+        "L913": None,
+        "L914": None,
+        "L915": None,
+        "L916": None,
+        "L918": None,
+        "L923": None,
+        "L1002": None,
+        "L1003": None,
+        "L1014": None,
+        "L1101": None,
+        "L1102": None,
+        "L1110": None,
+        "L1111": None,
+        "L1112": None,
+        "L9999": None
+    }
 
     def read(self, file_path=""):
         self.path = file_path
+
         try:
             if "\\" not in file_path:  # Try to open file in the same directory
                 file = open(os.path.join(os.getcwd(), file_path), "r")
             else:
                 file = open(file_path, "r")
-            file_contents = file.readlines()
+            self.file_raw_contents = file.readlines()
             file.close()
         except OSError:
             kasuga_io.quit_with_error(f'Can`t open: {file_path}')
-        last_line = self.__read_title(file_contents)
+
+
 
 
 class CifFile:
