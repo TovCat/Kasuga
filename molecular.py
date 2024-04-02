@@ -54,7 +54,6 @@ import numpy as np
 # Atomic weights for each respected atom
 element_weight = {
     'H': 1.0075,
-    'D': 2.01410178,
     'He': 4.002,
     'Li': 6.9675,
     'Be': 9.012,
@@ -170,7 +169,6 @@ element_weight = {
 
 covalent_radius = {
     'H': 0.32,
-    'D': 0.32,
     'Ne': 0.71,
     'F': 0.72,
     'O': 0.73,
@@ -457,6 +455,8 @@ class Molecule:
         self.inertia_eigenvectors = None
         self.inertia_eigenvalues = None
         self.inertia_vector_x, self.inertia_vector_y, self.inertia_vector_z = None, None, None
+        self.symmetrized = False
+        self.point_group = ""
 
     def __add__(self, other):
         for i in other.atoms:
@@ -693,7 +693,7 @@ class GaussianFile:
         self.calculation_instructions = []
         self.iops_instructions = []
         self.calculation_title = ""
-        self.initial_geometry = Molecule()
+        self.geometries = []
 
     def link1(self):
 
@@ -750,31 +750,36 @@ class GaussianFile:
         if extracted_lines[3].strip() == "Initialization pass.":
             return None
 
+    def link202(self):
+        extracted_lines = self.file_raw_contents[self.__start_end[0]: self.__start_end[1]]
+        new_molecule = Molecule()
+        if extracted_lines[0].strip() == "Symmetry turned off by external request.":
+            new_molecule.symmetrized = False
+        else:
+            new_molecule = True
+        a = extracted_lines[4].split()
+        new_molecule.point_group = a[1]
+        i = 0
+        check_line = extracted_lines[i + 10]
+        while check_line.strip()[0] != "-":
+            a = check_line.split()
+            atom_index = int(a[1])
+            new_atom = Atom()
+            new_atom.symbol = list(element_weight)[atom_index]
+            new_atom.assign_weight()
+            new_atom.coord[0] = float(a[3])
+            new_atom.coord[1] = float(a[4])
+            new_atom.coord[2] = float(a[5])
+            new_molecule.atoms.append(new_atom)
+            i += 1
+            check_line = extracted_lines[i + 10]
+        self.geometries.append(new_molecule)
+
     links_dict = {
         "L1": link1(),
         "L101": link101(),
-        "L102": None,
         "L103": link103(),
-        "L105": None,
-        "L106": None,
-        "L107": None,
-        "L108": None,
-        "L109": None,
-        "L110": None,
-        "L111": None,
-        "L112": None,
-        "L113": None,
-        "L114": None,
-        "L115": None,
-        "L116": None,
-        "L117": None,
-        "L118": None,
-        "L120": None,
-        "L121": None,
-        "L122": None,
-        "L123": None,
-        "L124": None,
-        "L202": None,
+        "L202": link202(),
         "L301": None,
         "L302": None,
         "L303": None,
