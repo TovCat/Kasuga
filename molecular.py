@@ -259,6 +259,17 @@ covalent_radius = {
 }
 
 
+def log_notation_to_float(s: str):
+    cut = []
+    if s.find("E") != -1:
+        cut = s.split("E")
+    elif s.find("D") != -1:
+        cut = s.split("D")
+    else:
+        return None
+    return float(cut[0]) * (10 ** float(cut[1]))
+
+
 class Vector:
     """
     Vector is a base class containing coordinates represented as a np.array(3)
@@ -682,6 +693,19 @@ class Molecule:
 
 class GaussianFile:
 
+    class SCF:
+
+        def __init__(self):
+            self.RMS_DP_convergency = 0.0
+            self.Max_DP_convergency = 0.0
+            self.DeltaE_convergency = 0.0
+            self.energy = []
+            self.delta_energy = []
+            self.final_energy = []
+            self.RMSDP = []
+            self.MaxDP = []
+            self.OVMax = []
+
     def __init__(self):
         self.path = ""
         self.file_raw_contents = []
@@ -694,6 +718,7 @@ class GaussianFile:
         self.iops_instructions = []
         self.calculation_title = ""
         self.geometries = []
+        self.scf_stages = []
 
     def link1(self):
 
@@ -756,7 +781,7 @@ class GaussianFile:
         if extracted_lines[0].strip() == "Symmetry turned off by external request.":
             new_molecule.symmetrized = False
         else:
-            new_molecule = True
+            new_molecule.symmetrized = True
         a = extracted_lines[4].split()
         new_molecule.point_group = a[1]
         i = 0
@@ -775,23 +800,15 @@ class GaussianFile:
             check_line = extracted_lines[i + 10]
         self.geometries.append(new_molecule)
 
+    def link502(self):
+        extracted_lines = self.file_raw_contents[self.__start_end[0]: self.__start_end[1]]
+
+
     links_dict = {
         "L1": link1(),
         "L101": link101(),
         "L103": link103(),
         "L202": link202(),
-        "L301": None,
-        "L302": None,
-        "L303": None,
-        "L308": None,
-        "L310": None,
-        "L311": None,
-        "L314": None,
-        "L316": None,
-        "L319": None,
-        "L401": None,
-        "L402": None,
-        "L405": None,
         "L502": None,
         "L503": None,
         "L506": None,
