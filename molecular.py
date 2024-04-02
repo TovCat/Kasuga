@@ -818,8 +818,31 @@ class GaussianFile:
                     new_scf.DeltaE_criteria = value
             if new_scf.DeltaE_criteria != 0.0 and new_scf.RMS_DP_criteria != 0.0 and new_scf.Max_DP_criteria != 0.0:
                 break
+        first_space = 0
         for num, line in enumerate(extracted_lines):
-            
+            if line == " ":
+                first_space = num
+                break
+        for num, line in enumerate(extracted_lines):
+            line_split = line.split()
+            if line_split[0] == "E=":
+                new_scf.energy.append(float(line_split[1]))
+                break
+        for i in range(first_space + 1, len(extracted_lines)):
+            if extracted_lines[i] == " ":
+                line = extracted_lines[i - 1]
+                line_split = line.split()
+                for num, l in enumerate(line_split):
+                    l_split = l.split("=")
+                    if l_split[0] == "RMSDP":
+                        new_scf.RMSDP.append(log_notation_to_float(l_split[1]))
+                    elif l_split[0] == "MaxDP":
+                        new_scf.MaxDP.append(log_notation_to_float(l_split[1]))
+                    elif l_split[0] == "DE":
+                        new_scf.delta_energy.append(log_notation_to_float(l_split[1]))
+                    elif l_split[0] == "OVMax":
+                        new_scf.OVMax.append(log_notation_to_float(l_split[1]))
+        self.scf_stages.append(new_scf)
 
 
     links_dict = {
@@ -844,8 +867,6 @@ class GaussianFile:
             file.close()
         except OSError:
             kasuga_io.quit_with_error(f'Can`t open: {file_path}')
-
-
 
 
 class CifFile:
