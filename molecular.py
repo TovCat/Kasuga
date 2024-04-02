@@ -696,9 +696,9 @@ class GaussianFile:
     class SCF:
 
         def __init__(self):
-            self.RMS_DP_convergency = 0.0
-            self.Max_DP_convergency = 0.0
-            self.DeltaE_convergency = 0.0
+            self.RMS_DP_criteria = 0.0
+            self.Max_DP_criteria = 0.0
+            self.DeltaE_criteria = 0.0
             self.energy = []
             self.delta_energy = []
             self.final_energy = []
@@ -802,6 +802,24 @@ class GaussianFile:
 
     def link502(self):
         extracted_lines = self.file_raw_contents[self.__start_end[0]: self.__start_end[1]]
+        new_scf = GaussianFile.SCF()
+        for num, line in enumerate(extracted_lines):
+            str1 = line.split()
+            if str1[0] == "Requested":
+                str2 = line.split("=")
+                value = log_notation_to_float(str2[1][:9])
+                str2split = str2[0].split()
+                if str2split[len(str2split) - 1] == "matrix":
+                    if str2split[len(str2split) - 3] == "RMS":
+                        new_scf.RMS_DP_criteria = value
+                    elif str2split[len(str2split) - 3] == "MAX":
+                        new_scf.Max_DP_criteria = value
+                elif str2split[len(str2split) - 1] == "energy":
+                    new_scf.DeltaE_criteria = value
+            if new_scf.DeltaE_criteria != 0.0 and new_scf.RMS_DP_criteria != 0.0 and new_scf.Max_DP_criteria != 0.0:
+                break
+        for num, line in enumerate(extracted_lines):
+            
 
 
     links_dict = {
@@ -809,48 +827,9 @@ class GaussianFile:
         "L101": link101(),
         "L103": link103(),
         "L202": link202(),
-        "L502": None,
-        "L503": None,
-        "L506": None,
-        "L508": None,
-        "L510": None,
+        "L502": link502(),
         "L601": None,
-        "L602": None,
-        "L604": None,
-        "L607": None,
-        "L608": None,
-        "L609": None,
-        "L610": None,
-        "L701": None,
-        "L702": None,
-        "L703": None,
-        "L716": None,
-        "L801": None,
-        "L802": None,
-        "L804": None,
-        "L811": None,
-        "L901": None,
-        "L902": None,
-        "L903": None,
-        "L904": None,
-        "L905": None,
-        "L906": None,
-        "L908": None,
-        "L913": None,
-        "L914": None,
-        "L915": None,
-        "L916": None,
-        "L918": None,
-        "L923": None,
-        "L1002": None,
-        "L1003": None,
-        "L1014": None,
-        "L1101": None,
-        "L1102": None,
-        "L1110": None,
-        "L1111": None,
-        "L1112": None,
-        "L9999": None
+        "L716": None
     }
 
     def read(self, file_path=""):
