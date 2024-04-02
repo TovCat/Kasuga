@@ -705,6 +705,8 @@ class GaussianFile:
             self.RMSDP = []
             self.MaxDP = []
             self.OVMax = []
+            self.occ_eigenvalues = []
+            self.virt_eigenvalues = []
 
     def __init__(self):
         self.path = ""
@@ -844,6 +846,32 @@ class GaussianFile:
                         new_scf.OVMax.append(log_notation_to_float(l_split[1]))
         self.scf_stages.append(new_scf)
 
+    def link601(self):
+        extracted_lines = self.file_raw_contents[self.__start_end[0]: self.__start_end[1]]
+        for num, line in enumerate(extracted_lines):
+            if line.strip() == "Mulliken charges:":
+                break
+            line_split = line.split("--")
+            a = line_split[0]
+            b = line_split[1]
+            a_split = a.split()
+            if a_split[1] == "occ.":
+                b_split = b.split(".")
+                for i in range(len(b_split)):
+                    if i%2 == 0:
+                        value = float(b_split[i])
+                    else:
+                        value += float(10 ** (-1 * len(b_split[i]))) * float(b_split[i])
+                self.scf_stages[len(self.scf_stages) - 1].occ_eigenvalues.append(value)
+            elif a_split[1] == "virt.":
+                b_split = b.split(".")
+                for i in range(len(b_split)):
+                    if i%2 == 0:
+                        value = float(b_split[i])
+                    else:
+                        value += float(10 ** (-1 * len(b_split[i]))) * float(b_split[i])
+                self.scf_stages[len(self.scf_stages) - 1].virt_eigenvalues.append(value)
+
 
     links_dict = {
         "L1": link1(),
@@ -851,7 +879,7 @@ class GaussianFile:
         "L103": link103(),
         "L202": link202(),
         "L502": link502(),
-        "L601": None,
+        "L601": link601(),
         "L716": None
     }
 
@@ -873,23 +901,23 @@ class CifFile:
     # Parser and processor for .cif files according to CIF v1.1 standard
 
     def __init__(self):
-        tags = {}  # Single fields from CIF
-        loops = []  # Looped fields from CIF
+        self.tags = {}  # Single fields from CIF
+        self.loops = []  # Looped fields from CIF
         # Cell parameters
-        cell_length_a = float
-        cell_length_b = float
-        cell_length_c = float
-        cell_angle_alpha = float
-        cell_angle_beta = float
-        cell_angle_gamma = float
+        self.cell_length_a = float
+        self.cell_length_b = float
+        self.cell_length_c = float
+        self.cell_angle_alpha = float
+        self.cell_angle_beta = float
+        self.cell_angle_gamma = float
         # Cartesian translation vectors
-        translation_a = np.zeros((3, 1))
-        translation_b = np.zeros((3, 1))
-        translation_c = np.zeros((3, 1))
+        self.translation_a = np.zeros((3, 1))
+        self.translation_b = np.zeros((3, 1))
+        self.translation_c = np.zeros((3, 1))
         # Transformation matrix from abc-system to Cartesian
-        transform_matrix = np.zeros((3, 3))
+        self.transform_matrix = np.zeros((3, 3))
         # Asymmetric unit of a primitive cell
-        as_unit = Molecule
+        self.as_unit = Molecule()
 
     @staticmethod
     def parse_line(line):
