@@ -426,6 +426,7 @@ class Atom(Vector):
 
     def __init__(self, symbol=""):
         self.weight = 0.0  # Atomic weight
+        self.charge = 0.0
         self.symbol = ""  # Chemical symbol of an atom
         super().__init__()
         if symbol != "":
@@ -467,6 +468,8 @@ class Molecule:
         self.inertia_eigenvalues = None
         self.inertia_vector_x, self.inertia_vector_y, self.inertia_vector_z = None, None, None
         self.symmetrized = False
+        self.dipole_moment = Vector()
+        self.quadrupole_moment = np.zeros((3, 3))
         self.point_group = ""
 
     def __add__(self, other):
@@ -848,13 +851,16 @@ class GaussianFile:
 
     def link601(self):
         extracted_lines = self.file_raw_contents[self.__start_end[0]: self.__start_end[1]]
+        mulliken_charges_pos = 0
         for num, line in enumerate(extracted_lines):
             if line.strip() == "Mulliken charges:":
+                mulliken_charges_pos = num
                 break
             line_split = line.split("--")
             a = line_split[0]
             b = line_split[1]
             a_split = a.split()
+            value = 0.0
             if a_split[1] == "occ.":
                 b_split = b.split(".")
                 for i in range(len(b_split)):
@@ -871,7 +877,29 @@ class GaussianFile:
                     else:
                         value += float(10 ** (-1 * len(b_split[i]))) * float(b_split[i])
                 self.scf_stages[len(self.scf_stages) - 1].virt_eigenvalues.append(value)
-
+        for i in range(mulliken_charges_pos + 1, len(extracted_lines) - 1):
+            line_split = extracted_lines[i]
+            if line_split[0] == "Sum":
+                break
+            self.geometries[len(self.geometries) - 1].atoms[int(line_split[0])].charge = float(line_split[2])
+        for num, line in enumerate(extracted_lines):
+            line_split = line.split()
+            if line_split[0] == "Dipole":
+                dipole_line = extracted_lines[num + 1].split()
+                self.geometries[len(self.geometries) - 1].dipole_moment[0] = float(dipole_line[1])
+                self.geometries[len(self.geometries) - 1].dipole_moment[1] = float(dipole_line[3])
+                self.geometries[len(self.geometries) - 1].dipole_moment[2] = float(dipole_line[5])
+            if line_split[0] == "Quadrupole":
+                quadrupole_line = extracted_lines[num + 1].split() + extracted_lines[num + 2].split()
+                self.geometries[len(self.geometries) - 1].quadrupole_moment[0, 0] = float(quadrupole_line[1])
+                self.geometries[len(self.geometries) - 1].quadrupole_moment[1, 1] = float(quadrupole_line[3])
+                self.geometries[len(self.geometries) - 1].quadrupole_moment[2, 2] = float(quadrupole_line[5])
+                self.geometries[len(self.geometries) - 1].quadrupole_moment[0, 1] = float(quadrupole_line[7])
+                self.geometries[len(self.geometries) - 1].quadrupole_moment[0, 2] = float(quadrupole_line[9])
+                self.geometries[len(self.geometries) - 1].quadrupole_moment[1, 2] = float(quadrupole_line[11])
+                self.geometries[len(self.geometries) - 1].quadrupole_moment[1, 0] = self.geometries[len(self.geometries) - 1].quadrupole_moment[0, 1]
+                self.geometries[len(self.geometries) - 1].quadrupole_moment[2, 0] = self.geometries[len(self.geometries) - 1].quadrupole_moment[0, 2]
+                self.geometries[len(self.geometries) - 1].quadrupole_moment[2, 1] = self.geometries[len(self.geometries) - 1].quadrupole_moment[2, 1]
 
     links_dict = {
         "L1": link1(),
