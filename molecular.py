@@ -714,7 +714,7 @@ class GaussianFile:
     def __init__(self):
         self.path = ""
         self.file_raw_contents = []
-        self.__start_end = None
+        self.__start_end = []
         self.version = ""
         self.revision_date = ""
         self.execution_date = ""
@@ -901,19 +901,16 @@ class GaussianFile:
                 self.geometries[len(self.geometries) - 1].quadrupole_moment[2, 0] = self.geometries[len(self.geometries) - 1].quadrupole_moment[0, 2]
                 self.geometries[len(self.geometries) - 1].quadrupole_moment[2, 1] = self.geometries[len(self.geometries) - 1].quadrupole_moment[2, 1]
 
-    links_dict = {
-        "L1": link1(),
-        "L101": link101(),
-        "L103": link103(),
-        "L202": link202(),
-        "L502": link502(),
-        "L601": link601(),
-        "L716": None
-    }
-
     def read(self, file_path=""):
+        links_dict = {
+            "L1": self.link1(),
+            "L101": self.link101(),
+            "L103": self.link103(),
+            "L202": self.link202(),
+            "L502": self.link502(),
+            "L601": self.link601(),
+        }
         self.path = file_path
-
         try:
             if "\\" not in file_path:  # Try to open file in the same directory
                 file = open(os.path.join(os.getcwd(), file_path), "r")
@@ -923,6 +920,31 @@ class GaussianFile:
             file.close()
         except OSError:
             kasuga_io.quit_with_error(f'Can`t open: {file_path}')
+        self.__start_end = [0, 0]
+        for num, line in enumerate(self.file_raw_contents):
+            split_line = line.split()
+            if "Link 1" in split_line and "Entering" in split_line:
+                self.__start_end[0] = num
+            if "Link 1" in split_line and "Leaving" in split_line:
+                self.__start_end[1] = num
+            if self.__start_end != [0, 0]:
+                self.link1()
+                break
+        self.__start_end = [0, 0]
+        for num, line in enumerate(self.file_raw_contents):
+            split_line = line.split()
+            detected_link = ""
+            if split_line[0] == "(Enter":
+                self.__start_end[0] = num
+                link_split1 = split_line[1].split("/")
+                link_split2 = link_split1[len(link_split1) - 1].split(".")
+                detected_link = link_split2[0]
+                detected_link[0] = "L"
+            if "Leave" in split_line and "Link" in split_line:
+                self.__start_end[1] = num
+                if detected_link in links_dict:
+                    links_dict[detected_link]
+                    self.__start_end = [0, 0]
 
 
 class CifFile:
