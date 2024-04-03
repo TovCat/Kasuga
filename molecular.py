@@ -260,7 +260,6 @@ covalent_radius = {
 
 
 def log_notation_to_float(s: str):
-    cut = []
     if s.find("E") != -1:
         cut = s.split("E")
     elif s.find("D") != -1:
@@ -408,7 +407,7 @@ class ConnectivityGraph:
             if count_inside == count_checked:
                 return inside
 
-    def subsets_connected(self, subset_one=np.zeros((1)), subset_two=np.zeros((1))):
+    def subsets_connected(self, subset_one=np.zeros(1), subset_two=np.zeros(1)):
         for i1 in range(subset_one.size):
             for i2 in range(subset_two.size):
                 if self.nodes[i1, i2] == 1 or self.nodes[i2, i1] == 1:
@@ -738,19 +737,19 @@ class GaussianFile:
                     return n + 2
 
         def get_link0(start_pos: int, lines):
-            for i in range(start_pos, len(lines)):
-                a = lines[i].strip()
+            for i1 in range(start_pos, len(lines)):
+                a = lines[i1].strip()
                 if a[0] == "-":
-                    return i + 1
+                    return i1 + 1
                 else:
                     splitted = a.split("=")
                     self.link0_instructions[splitted[0].strip()[1:]] = splitted[1].strip()
 
         def get_calculation_instructions(start_pos: int, lines):
-            for i in range(start_pos, len(lines)):
-                a = lines[i].strip()
+            for i1 in range(start_pos, len(lines)):
+                a = lines[i1].strip()
                 if a[0] == "-":
-                    return i + 1
+                    return i1 + 1
                 else:
                     self.calculation_instructions.append(a)
 
@@ -773,7 +772,7 @@ class GaussianFile:
             new_atom.coord[0] = float(line[1])
             new_atom.coord[1] = float(line[2])
             new_atom.coord[2] = float(line[3])
-            self.initial_geometry.atoms.append(new_atom)
+            self.geometries[0].atoms.append(new_atom)
 
     def link103(self):
         extracted_lines = self.file_raw_contents[self.__start_end[0]: self.__start_end[1]]
@@ -864,7 +863,7 @@ class GaussianFile:
             if a_split[1] == "occ.":
                 b_split = b.split(".")
                 for i in range(len(b_split)):
-                    if i%2 == 0:
+                    if i % 2 == 0:
                         value = float(b_split[i])
                     else:
                         value += float(10 ** (-1 * len(b_split[i]))) * float(b_split[i])
@@ -872,7 +871,7 @@ class GaussianFile:
             elif a_split[1] == "virt.":
                 b_split = b.split(".")
                 for i in range(len(b_split)):
-                    if i%2 == 0:
+                    if i % 2 == 0:
                         value = float(b_split[i])
                     else:
                         value += float(10 ** (-1 * len(b_split[i]))) * float(b_split[i])
@@ -897,9 +896,12 @@ class GaussianFile:
                 self.geometries[len(self.geometries) - 1].quadrupole_moment[0, 1] = float(quadrupole_line[7])
                 self.geometries[len(self.geometries) - 1].quadrupole_moment[0, 2] = float(quadrupole_line[9])
                 self.geometries[len(self.geometries) - 1].quadrupole_moment[1, 2] = float(quadrupole_line[11])
-                self.geometries[len(self.geometries) - 1].quadrupole_moment[1, 0] = self.geometries[len(self.geometries) - 1].quadrupole_moment[0, 1]
-                self.geometries[len(self.geometries) - 1].quadrupole_moment[2, 0] = self.geometries[len(self.geometries) - 1].quadrupole_moment[0, 2]
-                self.geometries[len(self.geometries) - 1].quadrupole_moment[2, 1] = self.geometries[len(self.geometries) - 1].quadrupole_moment[2, 1]
+                self.geometries[len(self.geometries) - 1].quadrupole_moment[1, 0] = (
+                    self.geometries[len(self.geometries) - 1].quadrupole_moment)[0, 1]
+                self.geometries[len(self.geometries) - 1].quadrupole_moment[2, 0] = (
+                    self.geometries[len(self.geometries) - 1].quadrupole_moment)[0, 2]
+                self.geometries[len(self.geometries) - 1].quadrupole_moment[2, 1] = (
+                    self.geometries[len(self.geometries) - 1].quadrupole_moment)[2, 1]
 
     def read(self, file_path=""):
         links_dict = {
@@ -1082,8 +1084,7 @@ class CifFile:
         else:
             kasuga_io.quit_with_error(f'Wrong dimensions of a transformed vector!')
 
-    @classmethod
-    def read_raw(cls, file_path):
+    def read_raw(self, file_path):
         file_contents = []
         parsed_loop = []
         loop_tags = []
@@ -1148,11 +1149,11 @@ class CifFile:
                                     for i2 in range(len(loop_tags)):
                                         d[loop_tags[i2]] = loop_contents[i1 + i2]
                                     parsed_loop.append(d)
-                                cls.loops.append(parsed_loop)
+                                self.loops.append(parsed_loop)
                                 loop_parsed = True
                                 break
                         else:
-                            loop_pre_contents = cls.parse_line(file_contents[i])
+                            loop_pre_contents = self.parse_line(file_contents[i])
                             if isinstance(loop_pre_contents, list):
                                 for i2 in loop_pre_contents:
                                     loop_contents.append(i2)
@@ -1187,55 +1188,54 @@ class CifFile:
                                               f' Please verify "{file_path}" integrity.')
                 else:
                     if cd_block_encountered:
-                        cls.tags[split[0][1:]] = tag_content
+                        self.tags[split[0][1:]] = tag_content
                     else:
-                        cls.tags[split[0][1:]] = cls.parse_line(tag_content)
+                        self.tags[split[0][1:]] = self.parse_line(tag_content)
 
-    @classmethod
-    def parse_raw(cls):
+    def parse_raw(self):
         # Primitive cell dimensions
-        cls.cell_length_a = cls.tags['cell_length_a']
-        cls.cell_length_b = cls.tags['cell_length_b']
-        cls.cell_length_c = cls.tags['cell_length_c']
+        self.cell_length_a = self.tags['cell_length_a']
+        self.cell_length_b = self.tags['cell_length_b']
+        self.cell_length_c = self.tags['cell_length_c']
 
         # Primitive cell angles
-        cls.cell_angle_alpha = cls.tags['cell_angle_alpha']  # Between c and b
-        cls.cell_angle_beta = cls.tags['cell_angle_beta']  # Between c and a
-        cls.cell_angle_gamma = cls.tags['cell_angle_gamma']  # Between a and b
+        self.cell_angle_alpha = self.tags['cell_angle_alpha']  # Between c and b
+        self.cell_angle_beta = self.tags['cell_angle_beta']  # Between c and a
+        self.cell_angle_gamma = self.tags['cell_angle_gamma']  # Between a and b
 
         # Generate transformation matrix from abc to Cartesian
-        cosa = np.cos(np.deg2rad(cls.cell_angle_alpha))
-        cosb = np.cos(np.deg2rad(cls.cell_angle_beta))
-        cosg = np.cos(np.deg2rad(cls.cell_angle_gamma))
-        sing = np.sin(np.deg2rad(cls.cell_angle_gamma))
+        cosa = np.cos(np.deg2rad(self.cell_angle_alpha))
+        cosb = np.cos(np.deg2rad(self.cell_angle_beta))
+        cosg = np.cos(np.deg2rad(self.cell_angle_gamma))
+        sing = np.sin(np.deg2rad(self.cell_angle_gamma))
         volume = np.sqrt(1.0 - cosa ** 2.0 - cosb ** 2.0 - cosg ** 2.0 + 2.0 * cosa * cosb * cosg)
-        cls.transform_matrix = np.array([[cls.cell_length_a, cls.cell_length_b * cosg, cls.cell_length_c * cosb],
-                                         [0, cls.cell_length_b * sing, cls.cell_length_c * (cosa - cosb * cosg) / sing],
-                                         [0, 0, cls.cell_length_c * volume / sing]])
+        self.transform_matrix = np.array([[self.cell_length_a, self.cell_length_b * cosg, self.cell_length_c * cosb],
+                                         [0, self.cell_length_b * sing, self.cell_length_c * (cosa - cosb * cosg) / sing],
+                                         [0, 0, self.cell_length_c * volume / sing]])
 
         # Translation vectors in cartesian coordinates
         # Most of the symmetry operations are performed in the abc-system for the sake of simplicity
         # Yet, for some processing down the line we might need cartesian vectors as well
-        cls.translation_a[0, 0] = cls.cell_length_a  # We assume that X-axis is aligned with a-axis
-        cls.translation_b = CifFile.transform_abc_to_cartesian(np.array([0, 1, 0]), cls.transform_matrix)
-        cls.translation_c = CifFile.transform_abc_to_cartesian(np.array([0, 0, 1]), cls.transform_matrix)
+        self.translation_a[0, 0] = self.cell_length_a  # We assume that X-axis is aligned with a-axis
+        self.translation_b = CifFile.transform_abc_to_cartesian(np.array([0, 1, 0]), self.transform_matrix)
+        self.translation_c = CifFile.transform_abc_to_cartesian(np.array([0, 0, 1]), self.transform_matrix)
 
         # Extract fractional coordinates from CIF loops
         found_as = False
-        for i1 in range(len(cls.loops)):
-            if "atom_site_label" in cls.loops[i1][0]:
+        for i1 in range(len(self.loops)):
+            if "atom_site_label" in self.loops[i1][0]:
                 if found_as:
                     kasuga_io.quit_with_error(f'Duplicated asymmetric units in CIF file!')
                 else:
                     found_as = True
-                for i2 in range(len(cls.loops[i1])):
-                    a = Atom
-                    a.symbol = cls.loops[i1][i2]['atom_site_type_symbol']
+                for i2 in range(len(self.loops[i1])):
+                    a = Atom()
+                    a.symbol = self.loops[i1][i2]['atom_site_type_symbol']
                     a.assign_weight()
-                    a.coord_abc[0, 1] = cls.loops[i1][i2]['atom_site_fract_x']
-                    a.coord_abc[1, 1] = cls.loops[i1][i2]['atom_site_fract_y']
-                    a.coord_abc[2, 1] = cls.loops[i1][i2]['atom_site_fract_z']
-                    cls.as_unit.atoms.append(a)
+                    a.coord[0] = self.loops[i1][i2]['atom_site_fract_x']
+                    a.coord[1] = self.loops[i1][i2]['atom_site_fract_y']
+                    a.coord[2] = self.loops[i1][i2]['atom_site_fract_z']
+                    self.as_unit.atoms.append(a)
 
 
 # Cluster is an array of molecules either natively generated from an associated CifFile or appended through other means
