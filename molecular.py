@@ -471,9 +471,20 @@ class Molecule:
         self.quadrupole_moment = np.zeros((3, 3))
         self.point_group = ""
 
+    def rebuild_connectivity(self):
+        self.connectivity_graph = ConnectivityGraph(len(self.atoms))
+        for i1 in range(len(self.atoms) - 1):
+            for i2 in range(len(self.atoms) - 1):
+                diff = self.atoms[i1].coord - self.atoms[i2].coord
+                vdw_sum = covalent_radius[self.atoms[i1].symbol] + covalent_radius[self.atoms[i2].symbol]
+                if abs(np.linalg.norm(diff) - vdw_sum) < 0.05:
+                    self.connectivity_graph.nodes[i1, i2] = 1
+                    self.connectivity_graph.nodes[i2, i1] = 1
+
     def __add__(self, other):
         for i in other.atoms:
             self.atoms.append(i)
+        self.rebuild_connectivity()
 
     def __sub__(self, other):
         for_deletion = []
@@ -484,6 +495,7 @@ class Molecule:
         for i1 in for_deletion:
             if i1 in self.atoms:
                 self.atoms.remove(i1)
+        self.rebuild_connectivity()
 
     def __eq__(self, other):
         diff = 0.0
@@ -680,16 +692,16 @@ class Molecule:
                 self.atoms[i].rotate(-1 * delta / 2, rotation_vector, self.atoms[angle[1]])
 
     def change_dihedral(self, dihedral: tuple, delta: float):
-        first_fragment = self.connectivity_graph.flood_fill_search(dihedral[0], (dihedral[1], dihedral[2], dihedral[3]))
-        second_fragment = self.connectivity_graph.flood_fill_search(dihedral[3], (dihedral[0], dihedral[1], dihedral[2]))
+        f_fragment = self.connectivity_graph.flood_fill_search(dihedral[0], (dihedral[1], dihedral[2], dihedral[3]))
+        s_fragment = self.connectivity_graph.flood_fill_search(dihedral[3], (dihedral[0], dihedral[1], dihedral[2]))
         rotation_vector = self.atoms[dihedral[1]].coord - self.atoms[dihedral[2]].coord
-        if self.connectivity_graph.subsets_connected(first_fragment, second_fragment):
+        if self.connectivity_graph.subsets_connected(f_fragment, s_fragment):
             self.atoms[dihedral[0]].rotate(delta / 2, rotation_vector, self.atoms[dihedral[1]])
             self.atoms[dihedral[3]].rotate(-1 * delta / 2, rotation_vector, self.atoms[dihedral[1]])
         else:
-            for i in first_fragment:
+            for i in f_fragment:
                 self.atoms[i].rotate(delta / 2, rotation_vector, self.atoms[dihedral[1]])
-            for i in second_fragment:
+            for i in s_fragment:
                 self.atoms[i].rotate(-1 * delta / 2, rotation_vector, self.atoms[dihedral[1]])
 
 
@@ -1015,11 +1027,11 @@ class CifFile:
         self.cell_angle_beta = float
         self.cell_angle_gamma = float
         # Cartesian translation vectors
-        self.translation_a = np.zeros((3, 1))
-        self.translation_b = np.zeros((3, 1))
-        self.translation_c = np.zeros((3, 1))
+        self.translation_a = Vector()
+        self.translation_b = Vector()
+        self.translation_c = Vector()
         # Transformation matrix from abc-system to Cartesian
-        self.transform_matrix = np.zeros((3, 3))
+        self.coord_transform_matrix = np.zeros((3, 3))
         # Asymmetric unit of a primitive cell
         self.as_unit = Molecule()
 
@@ -1060,29 +1072,6 @@ class CifFile:
             return out[0]
         else:
             return out
-
-    @staticmethod
-    def transform_abc_to_cartesian(vector: np.array, transform: np.array):
-        if transform.shape != (3, 3):
-            kasuga_io.quit_with_error(f'Wrong dimensions of a transformation matrix!')
-        if vector.shape == (3, 1):
-            return np.matmul(transform, vector)
-        elif vector.shape == (1, 3):
-            return np.transpose(transform, np.transpose(vector))
-        else:
-            kasuga_io.quit_with_error(f'Wrong dimensions of a transformed vector!')
-
-    @staticmethod
-    def transform_cartesian_to_abc(vector: np.array, transform: np.array):
-        if transform.shape != (3, 3):
-            kasuga_io.quit_with_error(f'Wrong dimensions of a transformation matrix!')
-        transform_revert = np.linalg.inv(transform)
-        if vector.shape == (3, 1):
-            return np.matmul(transform_revert, vector)
-        elif vector.shape == (1, 3):
-            return np.transpose(transform_revert, np.transpose(vector))
-        else:
-            kasuga_io.quit_with_error(f'Wrong dimensions of a transformed vector!')
 
     def read_raw(self, file_path):
         file_contents = []
@@ -1216,9 +1205,9 @@ class CifFile:
         # Translation vectors in cartesian coordinates
         # Most of the symmetry operations are performed in the abc-system for the sake of simplicity
         # Yet, for some processing down the line we might need cartesian vectors as well
-        self.translation_a[0, 0] = self.cell_length_a  # We assume that X-axis is aligned with a-axis
-        self.translation_b = CifFile.transform_abc_to_cartesian(np.array([0, 1, 0]), self.transform_matrix)
-        self.translation_c = CifFile.transform_abc_to_cartesian(np.array([0, 0, 1]), self.transform_matrix)
+        self.translation_a.coord[0] = self.cell_length_a  # We assume that X-axis is aligned with a-axis
+        self.translation_b.coord = np.matmul(np.array([0, 1, 0]), self.coord_transform_matrix)
+        self.translation_c.coord = np.matmul(np.array([0, 0, 1]), self.coord_transform_matrix)
 
         # Extract fractional coordinates from CIF loops
         found_as = False
