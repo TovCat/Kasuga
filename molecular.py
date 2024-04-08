@@ -1117,5 +1117,56 @@ class CifFile:
 class Cluster:
 
     def __init__(self):
-        self.molecules = [Molecule]
+        self.molecules = []
         self.cif = CifFile()
+
+    def molecule_is_inside(self, cartesian=True, mol=Molecule()):
+        mc = mol.get_mass_center()
+        if cartesian:
+            if mc[0] <= self.cif.cell_length_a and mc[1] <= self.cif.cell_length_b and mc[2] <= self.cif.cell_length_c:
+                return True
+        else:
+            if mc[0] <= 1 and mc[1] <= 1 and mc[2] <= 1:
+                return True
+        return False
+
+    def init_cif(self, cif_file: CifFile):
+        self.cif = cif_file
+        self.cif.build_as_molecules()
+        self.molecules = self.cif.as_molecules
+
+    #TODO cartesian tranform
+    def build_primitive_cell(self, cartesian=True):
+        new_molecule = Molecule()
+        for m in self.molecules:
+            for xyz in self.cif.xyz_eq:
+                vector, matrix = CifFile.parse_xyz_eq(xyz)
+                new_molecule.atoms = m.atoms
+                for a in range(len(new_molecule.atoms) - 1):
+                    new_molecule.atoms[a] = np.matmul(new_molecule.atoms[a], matrix)
+                    new_molecule.atoms[a] += vector
+                flag = True
+                for m in self.molecules:
+                    if new_molecule == m:
+                        flag = False
+                if flag:
+                    for m1 in self.molecules:
+                        if new_molecule.is_connected(m1):
+                            m1 += new_molecule
+                        else:
+                            self.molecules.append(new_molecule)
+        for_deletion = []
+        for m1 in self.molecules:
+            for m2 in self.molecules:
+                if m1.is_connected(m2):
+                    m2 += m1
+                    if m1 not in for_deletion:
+                        for_deletion.append(m1)
+            if not self.molecule_is_inside(m1):
+                if m1 not in for_deletion:
+                    for_deletion.append(m1)
+        for d in for_deletion:
+            self.molecules.remove(d)
+
+
+
