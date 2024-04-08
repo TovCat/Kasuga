@@ -66,30 +66,6 @@ def log_notation_to_float(s: str):
     return float(cut[0]) * (10 ** float(cut[1]))
 
 
-def parse_xyz_eq(eq: list):
-    for num, s in enumerate(eq):
-        eq[num] = s.strip()
-    transformation_matrix = np.zeros((3, 3))
-    translation_vector = np.zeros(3)
-    c = ["x", "y", "z"]
-    for i1 in range(3):
-        for i2 in range(3):
-            if c[i2] in eq[i1]:
-                if eq[i1][0] == "-":
-                    transformation_matrix[i2, i1] = -1
-                    eq[i1] = eq[i1][2:]
-                else:
-                    transformation_matrix[i2, i1] = 1
-                    eq[i1] = eq[i1][1:]
-    for i in range(3):
-        translation = 0
-        if eq[i] != "":
-            split = eq[i].split("/")
-            translation = float(split[0]) / float(split[1])
-        translation_vector[i] = translation
-    return translation_vector, transformation_matrix
-
-
 class Vector:
     """
     Vector is a base class containing coordinates represented as a np.array(3)
@@ -838,6 +814,7 @@ class CifFile:
     # Parser and processor for .cif files according to CIF v1.1 standard
 
     def __init__(self):
+        self.transform_matrix = None
         self.tags = {}  # Single fields from CIF
         self.loops = []  # Looped fields from CIF
         # Cell parameters
@@ -855,6 +832,32 @@ class CifFile:
         self.coord_transform_matrix = np.zeros((3, 3))
         # Asymmetric unit of a primitive cell
         self.as_unit = Molecule()
+        self.as_molecules = []
+        self.xyz_eq = []
+
+    @staticmethod
+    def parse_xyz_eq(eq: list):
+        for num, s in enumerate(eq):
+            eq[num] = s.strip()
+        transformation_matrix = np.zeros((3, 3))
+        translation_vector = np.zeros(3)
+        c = ["x", "y", "z"]
+        for i1 in range(3):
+            for i2 in range(3):
+                if c[i2] in eq[i1]:
+                    if eq[i1][0] == "-":
+                        transformation_matrix[i2, i1] = -1
+                        eq[i1] = eq[i1][2:]
+                    else:
+                        transformation_matrix[i2, i1] = 1
+                        eq[i1] = eq[i1][1:]
+        for i in range(3):
+            translation = 0
+            if eq[i] != "":
+                split = eq[i].split("/")
+                translation = float(split[0]) / float(split[1])
+            translation_vector[i] = translation
+        return translation_vector, transformation_matrix
 
     @staticmethod
     def parse_line(line):
@@ -1046,6 +1049,17 @@ class CifFile:
                     a.coord[1] = self.loops[i1][i2]['atom_site_fract_y']
                     a.coord[2] = self.loops[i1][i2]['atom_site_fract_z']
                     self.as_unit.atoms.append(a)
+        self.xyz_eq = SymOpsHall[HM2Hall[self.tags["_symmetry_space_group_name_H-M"]]]
+
+    def build_as_molecules(self):
+        mol_list = []
+        for s in self.xyz_eq:
+            vector, matrix = self.parse_xyz_eq(s)
+            new_molecule = Molecule()
+            new_molecule.atoms = self.as_unit.atoms
+            for i in range(len(new_molecule.atoms) - 1):
+                new_molecule.atoms[i] = np.matmul(new_molecule.atoms[i], matrix)
+                new_molecule.atoms[i] += vector
 
 
 # Cluster is an array of molecules either natively generated from an associated CifFile or appended through other means
