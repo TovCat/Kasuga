@@ -55,6 +55,7 @@ from constants import covalent_radius
 from constants import HM2Hall
 from constants import SymOpsHall
 
+
 def log_notation_to_float(s: str):
     if s.find("E") != -1:
         cut = s.split("E")
@@ -63,6 +64,30 @@ def log_notation_to_float(s: str):
     else:
         return None
     return float(cut[0]) * (10 ** float(cut[1]))
+
+
+def parse_xyz_eq(eq: list):
+    for num, s in enumerate(eq):
+        eq[num] = s.strip()
+    transformation_matrix = np.zeros((3, 3))
+    translation_vector = np.zeros(3)
+    c = ["x", "y", "z"]
+    for i1 in range(3):
+        for i2 in range(3):
+            if c[i2] in eq[i1]:
+                if eq[i1][0] == "-":
+                    transformation_matrix[i2, i1] = -1
+                    eq[i1] = eq[i1][2:]
+                else:
+                    transformation_matrix[i2, i1] = 1
+                    eq[i1] = eq[i1][1:]
+    for i in range(3):
+        translation = 0
+        if eq[i] != "":
+            split = eq[i].split("/")
+            translation = float(split[0]) / float(split[1])
+        translation_vector[i] = translation
+    return translation_vector, transformation_matrix
 
 
 class Vector:
@@ -1025,5 +1050,7 @@ class CifFile:
 
 # Cluster is an array of molecules either natively generated from an associated CifFile or appended through other means
 class Cluster:
-    molecules = [Molecule]
-    cif = CifFile
+
+    def __init__(self):
+        self.molecules = [Molecule]
+        self.cif = CifFile()
