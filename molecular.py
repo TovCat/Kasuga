@@ -1086,16 +1086,31 @@ class CifFile:
         self.xyz_eq = SymOpsHall[HM2Hall[self.tags["_symmetry_space_group_name_H-M"]]]
 
     def build_as_molecules(self):
-        mol_list = []
+        mol_to_add = []
         self.as_unit.rebuild_connectivity()
-
+        self.as_molecules = self.as_unit.separate_molecules()
         for s in self.xyz_eq:
             vector, matrix = self.parse_xyz_eq(s)
-            new_molecule = Molecule()
-            new_molecule.atoms = self.as_unit.atoms
-            for i in range(len(new_molecule.atoms) - 1):
-                new_molecule.atoms[i] = np.matmul(new_molecule.atoms[i], matrix)
-                new_molecule.atoms[i] += vector
+            for mol in self.as_molecules:
+                new_molecule = Molecule()
+                new_molecule.atoms = mol.atoms
+                for i in range(len(new_molecule.atoms) - 1):
+                    new_molecule.atoms[i] = np.matmul(new_molecule.atoms[i], matrix)
+                    new_molecule.atoms[i] += vector
+                    if mol != new_molecule:
+                        flag = False
+                        for i2 in range(len(self.as_molecules) - 1):
+                            if new_molecule.is_connected(self.as_molecules[i2]):
+                                flag = True
+                        if flag:
+                            mol_to_add.append(new_molecule)
+        for m in mol_to_add:
+            self.as_molecules.append(m)
+        whole = Molecule()
+        for m in self.as_molecules:
+            whole += m
+        whole.rebuild_connectivity()
+        self.as_molecules = whole.separate_molecules()
 
 
 # Cluster is an array of molecules either natively generated from an associated CifFile or appended through other means
