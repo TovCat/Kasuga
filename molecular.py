@@ -278,6 +278,40 @@ class Molecule:
                     self.connectivity_graph.nodes[i1, i2] = 1
                     self.connectivity_graph.nodes[i2, i1] = 1
 
+    def separate_molecules(self):
+        checked = []
+        vectors = []
+        flag = True
+        while flag:
+            for i in range(self.connectivity_graph.size - 1):
+                checked.append(False)
+            for i in range(self.connectivity_graph.size - 1):
+                if not checked:
+                    vector = self.connectivity_graph.flood_fill_search(startpoint=i)
+                    break
+            for i in range(self.connectivity_graph.size - 1):
+                if vector[i] == 1:
+                    checked[i] = True
+                else:
+                    checked[i] = False
+            vectors.append(vector)
+            check_count = 0
+            for i in range(self.connectivity_graph.size - 1):
+                if checked:
+                    check_count += 1
+            if check_count == self.connectivity_graph.size:
+                flag = False
+        molecules = []
+        for v in vectors:
+            new_mol = Molecule()
+            for i in range(self.connectivity_graph.size - 1):
+                if v[i] == 1:
+                    new_mol.atoms.append(self.atoms[i])
+            molecules.append(new_mol)
+        if len(molecules) == 1:
+            return None
+        return molecules
+
     def __add__(self, other):
         for i in other.atoms:
             self.atoms.append(i)
@@ -1053,6 +1087,8 @@ class CifFile:
 
     def build_as_molecules(self):
         mol_list = []
+        self.as_unit.rebuild_connectivity()
+
         for s in self.xyz_eq:
             vector, matrix = self.parse_xyz_eq(s)
             new_molecule = Molecule()
