@@ -268,6 +268,16 @@ class Molecule:
         self.quadrupole_moment = np.zeros((3, 3))
         self.point_group = ""
 
+    def add_atom(self, atom: str, v: Vector):
+        if atom in element_weight:
+            new_atom = Atom()
+            new_atom.coord = v
+            new_atom.symbol = atom
+            new_atom.assign_weight()
+            self.atoms.append(new_atom)
+        else:
+            kasuga_io.quit_with_error(f'add_atom method error: unknown atom {atom}')
+
     def rebuild_connectivity(self):
         self.connectivity_graph = ConnectivityGraph(len(self.atoms))
         for i1 in range(len(self.atoms) - 1):
@@ -1135,8 +1145,8 @@ class Cluster:
         self.cif.build_as_molecules()
         self.molecules = self.cif.as_molecules
 
-    #TODO cartesian tranform
-    def build_primitive_cell(self, cartesian=True):
+    #TODO cartesian transform
+    def build_primitive_cell(self):
         new_molecule = Molecule()
         for m in self.molecules:
             for xyz in self.cif.xyz_eq:
@@ -1168,5 +1178,8 @@ class Cluster:
         for d in for_deletion:
             self.molecules.remove(d)
 
-
-
+    def transform_to_cartesian(self):
+        for num1, mol in enumerate(self.molecules):
+            for num2, a in enumerate(mol.atoms):
+                mol.atoms.coord[num2] = np.matmul(a.coord, self.cif.transform_matrix)
+            self.molecules[num1].atoms = mol.atoms
