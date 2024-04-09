@@ -74,6 +74,13 @@ class Vector:
     def __init__(self):
         self.coord = np.zeros(3)
 
+    def __add__(self, other):
+        self.coord += other.coord
+
+    def __mul__(self, other):
+        if type(other) is int or type(other) is float:
+            self.coord *= other
+
     def transform(self, matrix: np.array):
         """
         General method for vector coordinate transformation using a transformation matrix.
@@ -267,6 +274,10 @@ class Molecule:
         self.dipole_moment = Vector()
         self.quadrupole_moment = np.zeros((3, 3))
         self.point_group = ""
+
+    def translate(self, v: Vector):
+        for i in range(len(self.atoms) - 1):
+            self.atoms[i].coord += v
 
     def add_atom(self, atom: str, v: Vector):
         if atom in element_weight:
@@ -1190,7 +1201,7 @@ class Cluster:
             self.molecules[num1].atoms = mol.atoms
 
     def multiply(self, direction="x", count=1):
-        translation_vector =  np.zeros(3)
+        translation_vector = Vector()
         xyz = ["x", "y", "z"]
         abc = ["a", "b", "c"]
         if direction in xyz:
@@ -1198,14 +1209,15 @@ class Cluster:
         elif direction in xyz:
             translation_vector[abc.index(direction)] = 1
         elif type(direction) is np.ndarray:
-            translation_vector = direction
+            translation_vector.coord = direction
         else:
             kasuga_io.quit_with_error(f'vector in multiply cluster routine: {direction}')
         cloned_molecules = []
         for mol in self.molecules:
-            for i in range(count)
+            for i in range(count):
                 new_molecule = Molecule()
                 new_molecule.atoms = mol.atoms
-                new_molecule
-                if not self.molecule_is_in_cluster(new_molecule):
-
+                t = i * translation_vector
+                new_molecule.translate(t)
+                if not self.molecule_is_in_cluster(new_molecule) and new_molecule not in cloned_molecules:
+                    cloned_molecules.append(new_molecule)
