@@ -50,6 +50,7 @@ processing down the line (such as integration, IC and ISC calculations) is handl
 import os
 import kasuga_io
 import numpy as np
+from copy import deepcopy
 from constants import element_weight
 from constants import covalent_radius
 from constants import HM2Hall
@@ -278,6 +279,38 @@ class Molecule:
     def translate(self, v: Vector):
         for i in range(len(self.atoms) - 1):
             self.atoms[i].coord += v
+
+    def transform(self, matrix: np.array):
+        for i in range(len(self.atoms) - 1):
+            self.atoms[i].transform(matrix)
+
+    def invert(self, inv_coord=np.zeros(3)):
+        for i in range(len(self.atoms) - 1):
+            self.atoms[i].invert(inv_coord)
+
+    def mirror(self, normal=np.array([1, 0, 0]), point=np.zeros(3)):
+        for i in range(len(self.atoms) - 1):
+            self.atoms[i].mirror(normal, point)
+
+    def xyz_mirror(self, plane="xy", plane_point=np.zeros(3)):
+        for i in range(len(self.atoms) - 1):
+            self.atoms[i].xyz_mirror(plane, plane_point)
+
+    def rotate(self, angle: float, axis_vector: np.array, axis_point=np.zeros(3)):
+        for i in range(len(self.atoms) - 1):
+            self.atoms[i].rotate(angle, axis_vector, axis_point)
+
+    def improper_rotate(self, angle: float, axis_vector=np.zeros(3), point=np.zeros(3)):
+        for i in range(len(self.atoms) - 1):
+            self.atoms[i].improper_rotate(angle, axis_vector, point)
+
+    def screw_axis(self, angle: float, axis_vector=np.zeros(3), point=np.zeros(3), translation_vector=np.zeros(3)):
+        for i in range(len(self.atoms) - 1):
+            self.atoms[i].screw_axis(angle, axis_vector, point, translation_vector)
+
+    def glide_plane(self, normal=np.array([1, 0, 0]), point=np.zeros(3), translation_vector=np.zeros(3)):
+        for i in range(len(self.atoms) - 1):
+            self.atoms[i].glide_plane(normal, point, translation_vector)
 
     def add_atom(self, atom: str, v: Vector):
         if atom in element_weight:
