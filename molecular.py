@@ -1130,7 +1130,7 @@ class Cluster:
         self.molecules = []
         self.cif = CifFile()
 
-    def molecule_is_inside(self, cartesian=True, mol=Molecule()):
+    def molecule_is_inside_pc(self, cartesian=True, mol=Molecule()):
         mc = mol.get_mass_center()
         if cartesian:
             if mc[0] <= self.cif.cell_length_a and mc[1] <= self.cif.cell_length_b and mc[2] <= self.cif.cell_length_c:
@@ -1140,12 +1140,17 @@ class Cluster:
                 return True
         return False
 
+    def molecule_is_in_cluster(self, m: Molecule):
+        for mol in self.molecules:
+            if m == mol:
+                return True
+        return False
+
     def init_cif(self, cif_file: CifFile):
         self.cif = cif_file
         self.cif.build_as_molecules()
         self.molecules = self.cif.as_molecules
 
-    #TODO cartesian transform
     def build_primitive_cell(self):
         new_molecule = Molecule()
         for m in self.molecules:
@@ -1172,7 +1177,7 @@ class Cluster:
                     m2 += m1
                     if m1 not in for_deletion:
                         for_deletion.append(m1)
-            if not self.molecule_is_inside(m1):
+            if not self.molecule_is_inside_pc(m1):
                 if m1 not in for_deletion:
                     for_deletion.append(m1)
         for d in for_deletion:
@@ -1183,3 +1188,24 @@ class Cluster:
             for num2, a in enumerate(mol.atoms):
                 mol.atoms.coord[num2] = np.matmul(a.coord, self.cif.transform_matrix)
             self.molecules[num1].atoms = mol.atoms
+
+    def multiply(self, direction="x", count=1):
+        translation_vector =  np.zeros(3)
+        xyz = ["x", "y", "z"]
+        abc = ["a", "b", "c"]
+        if direction in xyz:
+            translation_vector[xyz.index(direction)] = 1
+        elif direction in xyz:
+            translation_vector[abc.index(direction)] = 1
+        elif type(direction) is np.ndarray:
+            translation_vector = direction
+        else:
+            kasuga_io.quit_with_error(f'vector in multiply cluster routine: {direction}')
+        cloned_molecules = []
+        for mol in self.molecules:
+            for i in range(count)
+                new_molecule = Molecule()
+                new_molecule.atoms = mol.atoms
+                new_molecule
+                if not self.molecule_is_in_cluster(new_molecule):
+
