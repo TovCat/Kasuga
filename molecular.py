@@ -80,7 +80,13 @@ class Vector:
 
     def __mul__(self, other):
         if type(other) is int or type(other) is float:
-            self.coord *= other
+            return self.coord * other
+
+    def __setitem__(self, key, value):
+        self.coord[key] = value
+
+    def __getitem__(self, key):
+        return self.coord[key]
 
     def transform(self, matrix: np.array):
         """
@@ -336,6 +342,7 @@ class Molecule:
         checked = []
         vectors = []
         flag = True
+        vector = None
         while flag:
             for i in range(self.connectivity_graph.size - 1):
                 checked.append(False)
@@ -526,8 +533,8 @@ class Molecule:
     def match_rotation_to(self, other):
         # Extract principal axes for each molecule
         # Static stays in place, rotated is transformed
-        rotated_x, rotated_y, rotated_z = self.get_inertia_tensor()
-        static_x, static_y, static_z = other.get_inertia_tensor()
+        rotated_x, rotated_y, rotated_z = self.get_inertia_vectors()
+        static_x, static_y, static_z = other.get_inertia_vectors()
         # Since the vectors are stored in ((3,1)) shape we need transpose them first
         rotated_x = np.transpose(rotated_x)
         rotated_y = np.transpose(rotated_y)
@@ -566,6 +573,7 @@ class Molecule:
         second_fragment = self.connectivity_graph.flood_fill_search(angle[2], (angle[1]))
         v1 = self.atoms[angle[0]].coord - self.atoms[angle[1]].coord
         v2 = self.atoms[angle[2]].coord - self.atoms[angle[1]].coord
+        # noinspection PyUnreachableCode
         rotation_vector = np.cross(v1, v2)
         if self.connectivity_graph.subsets_connected(first_fragment, second_fragment):
             self.atoms[angle[0]].rotate(delta / 2, rotation_vector, self.atoms[angle[1]])
@@ -842,7 +850,7 @@ class GaussianFile:
             if "Leave" in split_line and "Link" in split_line:
                 self.__start_end[1] = num
                 if detected_link in links_dict:
-                    links_dict[detected_link]
+                    result = links_dict[detected_link]()
                     self.__start_end = [0, 0]
 
 
@@ -852,7 +860,7 @@ class GaussianCube:
         self.num_atoms = 0
         self.steps = np.zeros((3, 1), dtype=int)
         self.volume = np.zeros((3, 3))
-        self.origin = np.zeros((3))
+        self.origin = np.zeros(3)
         self.voxels = np.zeros((3, 3, 3))
         self.grid = []
         self.dv = 0
@@ -894,7 +902,8 @@ class GaussianCube:
         for x in range(self.steps[0, 0]):
             for y in range(self.steps[1, 0]):
                 for z in range(self.steps[2, 0]):
-                    temp = self. origin + np.array([x * self.volume[0, 0], y * self.volume[1, 1], z * self.volume[2, 2]])
+                    temp = self. origin + np.array([x * self.volume[0, 0], y * self.volume[1, 1],
+                                                    z * self.volume[2, 2]])
                     self.grid.append(temp)
 
 
@@ -1111,7 +1120,8 @@ class CifFile:
         sing = np.sin(np.deg2rad(self.cell_angle_gamma))
         volume = np.sqrt(1.0 - cosa ** 2.0 - cosb ** 2.0 - cosg ** 2.0 + 2.0 * cosa * cosb * cosg)
         self.transform_matrix = np.array([[self.cell_length_a, self.cell_length_b * cosg, self.cell_length_c * cosb],
-                                         [0, self.cell_length_b * sing, self.cell_length_c * (cosa - cosb * cosg) / sing],
+                                         [0, self.cell_length_b * sing, self.cell_length_c *
+                                          (cosa - cosb * cosg) / sing],
                                          [0, 0, self.cell_length_c * volume / sing]])
 
         # Translation vectors in cartesian coordinates
@@ -1205,8 +1215,8 @@ class Cluster:
                     new_molecule.atoms[a] = np.matmul(new_molecule.atoms[a], matrix)
                     new_molecule.atoms[a] += vector
                 flag = True
-                for m in self.molecules:
-                    if new_molecule == m:
+                for m1 in self.molecules:
+                    if new_molecule == m1:
                         flag = False
                 if flag:
                     for m1 in self.molecules:
@@ -1250,7 +1260,8 @@ class Cluster:
             for i in range(count):
                 new_molecule = Molecule()
                 new_molecule.atoms = mol.atoms
-                t = i * translation_vector
+                t = Vector()
+                t.coord = i * translation_vector.coord
                 new_molecule.translate(t)
                 if not self.molecule_is_in_cluster(new_molecule) and new_molecule not in cloned_molecules:
                     cloned_molecules.append(new_molecule)
