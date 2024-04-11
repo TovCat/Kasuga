@@ -581,6 +581,20 @@ class Molecule:
             self.atoms[i].coord = np.transpose(np.matmul(np.transpose(self.atoms[i].coord), final_rotation))
             self.atoms[i].coord += mass_center
 
+    def read_charges(self, file_path=""):
+        try:
+            if "\\" not in file_path:  # Try to open file in the same directory
+                file = open(os.path.join(os.getcwd(), file_path), "r")
+            else:
+                file = open(file_path, "r")
+            file_contents = file.readlines()
+            file.close()
+        except OSError:
+            kasuga_io.quit_with_error(f'Can`t open: {file_path}')
+        for num, line in enumerate(file_contents):
+            line_split = line.split()
+            self.atoms[num].charge = float(line_split[4])
+
     def change_bond(self, bond: tuple, delta: float):
         first_fragment = self.connectivity_graph.flood_fill_search(bond[0], (bond[1]))
         second_fragment = self.connectivity_graph.flood_fill_search(bond[1], (bond[0]))
