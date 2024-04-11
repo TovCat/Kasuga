@@ -69,7 +69,7 @@ def log_notation_to_float(s: str):
 
 class Vector:
     """
-    Vector is a base class containing coordinates represented as a np.array(3)
+    Base class containing coordinates represented as a np.array(3)
     """
 
     def __init__(self):
@@ -77,6 +77,9 @@ class Vector:
 
     def __add__(self, other):
         self.coord += other.coord
+
+    def __sub__(self, other):
+        self.coord -= other.coord
 
     def __mul__(self, other):
         if type(other) is int or type(other) is float:
@@ -88,16 +91,22 @@ class Vector:
     def __getitem__(self, key):
         return self.coord[key]
 
+    def norm(self):
+        """
+        Calculate vector's norm.
+        """
+        return np.linalg.norm(self.coord)
+
     def transform(self, matrix: np.array):
         """
-        General method for vector coordinate transformation using a transformation matrix.
+        Transform vector using a 3x3 matrix.
         :param matrix: transformation 3x3 matrix (np.array)
         """
         self.coord = np.matmul(self.coord, matrix)
 
     def invert(self, inv_coord=np.zeros(3)):
         """
-        Invert vector around arbitrary center.
+        Invert vector around an arbitrary center.
         :param inv_coord: inversion center coordinates (np.array, [0,0,0] by default)
         """
         shift = inv_coord - self.coord
@@ -197,13 +206,21 @@ class ConnectivityGraph:
         self.size = size
         self.nodes = np.zeros((size, size))
 
-    def flood_fill_search(self, startpoint: int, excluded=()):
+    def __getitem__(self, item):
+        return self.nodes[item]
+
+    def __setitem__(self, key, value):
+        self.nodes[key] = value
+
+    def flood_fill_search(self, startpoint: int, excluded):
+        if excluded is None:
+            excluded = []
         inside = np.zeros(self.size)  # points that are connected to the starting one
         checked = np.zeros(self.size)  # points that we have already checked
         while True:
             for i in range(self.size):
                 if self.nodes[startpoint, i] == 1 or self.nodes[i, startpoint] == 1:
-                    if i not in excluded:
+                    if i not in excluded and inside[i] != 1:
                         inside[i] = 1  # include all points that are connected to current start point
             checked[startpoint] = 1  # so, we've checked current start point
             count_inside = 0
@@ -215,10 +232,11 @@ class ConnectivityGraph:
                     count_inside += 1
                 if checked[i] != 0 and inside[i] == 1:
                     startpoint = i
+                    break
             if count_inside == count_checked:
                 return inside
 
-    def subsets_connected(self, subset_one=np.zeros(1), subset_two=np.zeros(1)):
+    def subsets_connected(self, subset_one: np.ndarray, subset_two: np.ndarray):
         for i1 in range(subset_one.size):
             for i2 in range(subset_two.size):
                 if self.nodes[i1, i2] == 1 or self.nodes[i2, i1] == 1:
@@ -234,9 +252,10 @@ class Atom(Vector):
         else:
             kasuga_io.quit_with_error(f'Unrecognized {self.symbol} atom encountered!')
 
-    def __init__(self, symbol=""):
+    def __init__(self, symbol="", v=Vector()):
         self.weight = 0.0  # Atomic weight
         self.charge = 0.0
+        self.coord = v
         self.symbol = ""  # Chemical symbol of an atom
         super().__init__()
         if symbol != "":
@@ -257,11 +276,12 @@ class Atom(Vector):
             return True
 
     def connected(self, b, simplified=False, cutoff=0.025):
+        vdw_distance = covalent_radius[self.symbol] + covalent_radius[b.symbol]
         if simplified:
             d = Vector.distance_rough(self, b)
         else:
             d = Vector.distance(self, b)
-        if d <= cutoff:
+        if abs(d - vdw_distance) <= cutoff:
             return True
         else:
             return False
@@ -281,97 +301,6 @@ class Molecule:
         self.dipole_moment = Vector()
         self.quadrupole_moment = np.zeros((3, 3))
         self.point_group = ""
-
-    def translate(self, v: Vector):
-        for i in range(len(self.atoms) - 1):
-            self.atoms[i].coord += v
-
-    def transform(self, matrix: np.array):
-        for i in range(len(self.atoms) - 1):
-            self.atoms[i].transform(matrix)
-
-    def invert(self, inv_coord=np.zeros(3)):
-        for i in range(len(self.atoms) - 1):
-            self.atoms[i].invert(inv_coord)
-
-    def mirror(self, normal=np.array([1, 0, 0]), point=np.zeros(3)):
-        for i in range(len(self.atoms) - 1):
-            self.atoms[i].mirror(normal, point)
-
-    def xyz_mirror(self, plane="xy", plane_point=np.zeros(3)):
-        for i in range(len(self.atoms) - 1):
-            self.atoms[i].xyz_mirror(plane, plane_point)
-
-    def rotate(self, angle: float, axis_vector: np.array, axis_point=np.zeros(3)):
-        for i in range(len(self.atoms) - 1):
-            self.atoms[i].rotate(angle, axis_vector, axis_point)
-
-    def improper_rotate(self, angle: float, axis_vector=np.zeros(3), point=np.zeros(3)):
-        for i in range(len(self.atoms) - 1):
-            self.atoms[i].improper_rotate(angle, axis_vector, point)
-
-    def screw_axis(self, angle: float, axis_vector=np.zeros(3), point=np.zeros(3), translation_vector=np.zeros(3)):
-        for i in range(len(self.atoms) - 1):
-            self.atoms[i].screw_axis(angle, axis_vector, point, translation_vector)
-
-    def glide_plane(self, normal=np.array([1, 0, 0]), point=np.zeros(3), translation_vector=np.zeros(3)):
-        for i in range(len(self.atoms) - 1):
-            self.atoms[i].glide_plane(normal, point, translation_vector)
-
-    def add_atom(self, atom: str, v: Vector):
-        if atom in element_weight:
-            new_atom = Atom()
-            new_atom.coord = v
-            new_atom.symbol = atom
-            new_atom.assign_weight()
-            self.atoms.append(new_atom)
-        else:
-            kasuga_io.quit_with_error(f'add_atom method error: unknown atom {atom}')
-
-    def rebuild_connectivity(self):
-        self.connectivity_graph = ConnectivityGraph(len(self.atoms))
-        for i1 in range(len(self.atoms) - 1):
-            for i2 in range(len(self.atoms) - 1):
-                diff = self.atoms[i1].coord - self.atoms[i2].coord
-                vdw_sum = covalent_radius[self.atoms[i1].symbol] + covalent_radius[self.atoms[i2].symbol]
-                if abs(np.linalg.norm(diff) - vdw_sum) < 0.05:
-                    self.connectivity_graph.nodes[i1, i2] = 1
-                    self.connectivity_graph.nodes[i2, i1] = 1
-
-    def separate_molecules(self):
-        checked = []
-        vectors = []
-        flag = True
-        vector = None
-        while flag:
-            for i in range(self.connectivity_graph.size - 1):
-                checked.append(False)
-            for i in range(self.connectivity_graph.size - 1):
-                if not checked:
-                    vector = self.connectivity_graph.flood_fill_search(startpoint=i)
-                    break
-            for i in range(self.connectivity_graph.size - 1):
-                if vector[i] == 1:
-                    checked[i] = True
-                else:
-                    checked[i] = False
-            vectors.append(vector)
-            check_count = 0
-            for i in range(self.connectivity_graph.size - 1):
-                if checked:
-                    check_count += 1
-            if check_count == self.connectivity_graph.size:
-                flag = False
-        molecules = []
-        for v in vectors:
-            new_mol = Molecule()
-            for i in range(self.connectivity_graph.size - 1):
-                if v[i] == 1:
-                    new_mol.atoms.append(self.atoms[i])
-            molecules.append(new_mol)
-        if len(molecules) == 1:
-            return None
-        return molecules
 
     def __add__(self, other):
         for i in other.atoms:
@@ -427,6 +356,104 @@ class Molecule:
                 return False
             else:
                 return True
+
+    def __getitem__(self, item):
+        if len(item) >= 2:
+            return self.atoms[item[0]].coord[item[1]]
+        else:
+            return self.atoms[item].coord
+
+    def __setitem__(self, key, value):
+        if len(key) >= 2:
+            self.atoms[key[0]].coord[key[1]] = value
+        else:
+            self.atoms[key].coord = value
+
+    def translate(self, v: Vector):
+        for i in range(len(self.atoms) - 1):
+            self.atoms[i].coord += v
+
+    def transform(self, matrix: np.array):
+        for i in range(len(self.atoms) - 1):
+            self.atoms[i].transform(matrix)
+
+    def invert(self, inv_coord=np.zeros(3)):
+        for i in range(len(self.atoms) - 1):
+            self.atoms[i].invert(inv_coord)
+
+    def mirror(self, normal=np.array([1, 0, 0]), point=np.zeros(3)):
+        for i in range(len(self.atoms) - 1):
+            self.atoms[i].mirror(normal, point)
+
+    def xyz_mirror(self, plane="xy", plane_point=np.zeros(3)):
+        for i in range(len(self.atoms) - 1):
+            self.atoms[i].xyz_mirror(plane, plane_point)
+
+    def rotate(self, angle: float, axis_vector: np.array, axis_point=np.zeros(3)):
+        for i in range(len(self.atoms) - 1):
+            self.atoms[i].rotate(angle, axis_vector, axis_point)
+
+    def improper_rotate(self, angle: float, axis_vector=np.zeros(3), point=np.zeros(3)):
+        for i in range(len(self.atoms) - 1):
+            self.atoms[i].improper_rotate(angle, axis_vector, point)
+
+    def screw_axis(self, angle: float, axis_vector=np.zeros(3), point=np.zeros(3), translation_vector=np.zeros(3)):
+        for i in range(len(self.atoms) - 1):
+            self.atoms[i].screw_axis(angle, axis_vector, point, translation_vector)
+
+    def glide_plane(self, normal=np.array([1, 0, 0]), point=np.zeros(3), translation_vector=np.zeros(3)):
+        for i in range(len(self.atoms) - 1):
+            self.atoms[i].glide_plane(normal, point, translation_vector)
+
+    def add_atom(self, atom: str, v: Vector):
+        if atom in element_weight:
+            new_atom = Atom(symbol=atom)
+            new_atom.coord = v
+            self.atoms.append(new_atom)
+        else:
+            kasuga_io.quit_with_error(f'add_atom method error: unknown atom {atom}')
+
+    def rebuild_connectivity(self):
+        self.connectivity_graph = ConnectivityGraph(len(self.atoms))
+        for n1, a1 in enumerate(self.atoms):
+            for n2, a2 in enumerate(self.atoms):
+                if a1.connected(a2):
+                    self.connectivity_graph.nodes[n1, n2] = 1
+
+    def separate_molecules(self):
+        checked = []
+        vectors = []
+        flag = True
+        vector = None
+        while flag:
+            for i in range(self.connectivity_graph.size - 1):
+                checked.append(False)
+            for i in range(self.connectivity_graph.size - 1):
+                if not checked:
+                    vector = self.connectivity_graph.flood_fill_search(startpoint=i)
+                    break
+            for i in range(self.connectivity_graph.size - 1):
+                if vector[i] == 1:
+                    checked[i] = True
+                else:
+                    checked[i] = False
+            vectors.append(vector)
+            check_count = 0
+            for i in range(self.connectivity_graph.size - 1):
+                if checked:
+                    check_count += 1
+            if check_count == self.connectivity_graph.size:
+                flag = False
+        molecules = []
+        for v in vectors:
+            new_mol = Molecule()
+            for i in range(self.connectivity_graph.size - 1):
+                if v[i] == 1:
+                    new_mol.atoms.append(self.atoms[i])
+            molecules.append(new_mol)
+        if len(molecules) == 1:
+            return None
+        return molecules
 
     def is_connected(self, other):
         for i1 in self.atoms:
