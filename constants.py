@@ -16,7 +16,6 @@
          oh mah gad
 """
 
-
 # Atomic weights for each respected atom
 element_weight = {
     'H': 1.0075,

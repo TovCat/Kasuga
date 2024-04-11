@@ -582,15 +582,7 @@ class Molecule:
             self.atoms[i].coord += mass_center
 
     def read_charges(self, file_path=""):
-        try:
-            if "\\" not in file_path:  # Try to open file in the same directory
-                file = open(os.path.join(os.getcwd(), file_path), "r")
-            else:
-                file = open(file_path, "r")
-            file_contents = file.readlines()
-            file.close()
-        except OSError:
-            kasuga_io.quit_with_error(f'Can`t open: {file_path}')
+        file_contents = kasuga_io.try_read(file_path)
         for num, line in enumerate(file_contents):
             line_split = line.split()
             self.atoms[num].charge = float(line_split[4])
@@ -859,15 +851,7 @@ class GaussianFile:
             "L601": self.link601(),
         }
         self.path = file_path
-        try:
-            if "\\" not in file_path:  # Try to open file in the same directory
-                file = open(os.path.join(os.getcwd(), file_path), "r")
-            else:
-                file = open(file_path, "r")
-            self.file_raw_contents = file.readlines()
-            file.close()
-        except OSError:
-            kasuga_io.quit_with_error(f'Can`t open: {file_path}')
+        self.file_raw_contents = kasuga_io.try_read(file_path)
         self.__start_end = [0, 0]
         for num, line in enumerate(self.file_raw_contents):
             split_line = line.split()
@@ -907,13 +891,7 @@ class GaussianCube:
         self.dv = 0
 
     def read(self, path=""):
-        try:
-            file = open(path, "r")
-        except OSError:
-            print("Could not open the CUBE file at: ", path)
-            exit(-1)
-        contents = file.readlines()
-        file.close()
+        contents = kasuga_io.try_read(path)
         words = contents[2].split()
         self.num_atoms = int(words[0])
         self.origin = np.array([float(words[1]), float(words[2]), float(words[3])])
@@ -1040,15 +1018,7 @@ class CifFile:
         parsed_loop = []
         loop_tags = []
         loop_contents = []
-        try:
-            if "\\" not in file_path:  # Try to open file in the same directory
-                file = open(os.path.join(os.getcwd(), file_path), "r")
-            else:
-                file = open(file_path, "r")
-            file_contents = file.readlines()
-            file.close()
-        except OSError:
-            kasuga_io.quit_with_error(f'Can`t open: {file_path}')
+        file_contents = kasuga_io.try_read(file_path)
 
         for i in range(len(file_contents)):  # Initial survey for any Shelxl data to be expunged
             if "_shelx_res_file" in file_contents[i]:
